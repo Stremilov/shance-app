@@ -1,0 +1,49 @@
+linters:
+  enable:
+    - gofmt
+    - revive
+    - govet
+    - errcheck
+    - staticcheck
+    - gosimple
+    - ineffassign
+    - unused
+    - misspell
+    - gosec
+    - unconvert
+    - goconst
+    - gocyclo
+    - dupl
+    - gocritic
+    - prealloc
+
+linters-settings:
+  gocyclo:
+    min-complexity: 15
+  dupl:
+    threshold: 100
+  goconst:
+    min-len: 2
+    min-occurrences: 3
+  misspell:
+    locale: US
+
+run:
+  deadline: 5m
+  tests: true
+
+issues:
+  exclude-dirs:
+    - vendor
+    - docs
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - gocyclo
+        - dupl
+        - gosec
+
+output:
+  format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true 
