@@ -1,0 +1,41 @@
+package repository
+
+import (
+	"github.com/levstremilov/shance-app/internal/domain"
+	"gorm.io/gorm"
+)
+
+type ProjectRepository struct {
+	db *gorm.DB
+}
+
+func NewProjectRepository(db *gorm.DB) *ProjectRepository {
+	return &ProjectRepository{db: db}
+}
+
+func (r *ProjectRepository) Create(project *domain.Project) error {
+	return r.db.Create(project).Error
+}
+
+func (r *ProjectRepository) GetAll() ([]domain.Project, error) {
+	var projects []domain.Project
+	err := r.db.Find(&projects).Error
+	return projects, err
+}
+
+func (r *ProjectRepository) GetByID(id uint) (*domain.Project, error) {
+	var project domain.Project
+	err := r.db.First(&project, id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &project, nil
+}
+
+func (r *ProjectRepository) Update(project *domain.Project) error {
+	return r.db.Save(project).Error
+}
+
+func (r *ProjectRepository) Delete(id uint) error {
+	return r.db.Delete(&domain.Project{}, id).Error
+} 
