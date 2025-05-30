@@ -6,6 +6,8 @@ import (
 
 	"github.com/levstremilov/shance-app/internal/domain"
 	"github.com/levstremilov/shance-app/internal/migration"
+
+	// blank import for postgres driver
 	_ "github.com/lib/pq"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"

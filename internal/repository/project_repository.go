@@ -38,4 +38,4 @@ func (r *ProjectRepository) Update(project *domain.Project) error {
 
 func (r *ProjectRepository) Delete(id uint) error {
 	return r.db.Delete(&domain.Project{}, id).Error
-} 
+}

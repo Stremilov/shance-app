@@ -6,7 +6,9 @@ import (
 	"log"
 
 	"github.com/golang-migrate/migrate/v4"
+	// blank import for file source driver
 	"github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/lib/pq"
 )

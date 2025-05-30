@@ -31,4 +31,4 @@ func (s *ProjectService) UpdateProject(project *domain.Project) error {
 
 func (s *ProjectService) DeleteProject(id uint) error {
 	return s.repo.Delete(id)
-} 
+}
