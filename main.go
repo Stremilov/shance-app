@@ -1,18 +1,39 @@
 package main
 
+// @title Shance API
+// @version 1.0
+// @description API для управления проектами
+// @host localhost:8080
+// @BasePath /api/v1
+// @schemes http
+
 import (
 	"fmt"
 	"log"
 
 	"github.com/gin-gonic/gin"
+	"github.com/levstremilov/shance-app/docs"
 	"github.com/levstremilov/shance-app/internal/config"
 	"github.com/levstremilov/shance-app/internal/handler"
 	"github.com/levstremilov/shance-app/internal/repository"
 	"github.com/levstremilov/shance-app/internal/service"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 func setupRouter(handler *handler.ProjectHandler) *gin.Engine {
 	r := gin.Default()
+
+	// Swagger документация
+	docs.SwaggerInfo.Title = "Shance API"
+	docs.SwaggerInfo.Description = "API для управления проектами"
+	docs.SwaggerInfo.Version = "1.0"
+	docs.SwaggerInfo.Host = "localhost:8000"
+	docs.SwaggerInfo.BasePath = "/api/v1"
+	docs.SwaggerInfo.Schemes = []string{"http"}
+
+	r.GET("/api/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
 	api := r.Group("/api/v1")
 	{
 		projects := api.Group("/projects")

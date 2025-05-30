@@ -1,8 +1,6 @@
 package config
 
 import (
-	"fmt"
-
 	"github.com/spf13/viper"
 )
 
@@ -16,13 +14,19 @@ type Config struct {
 }
 
 func LoadConfig() (*Config, error) {
+	viper.SetDefault("DB_HOST", "localhost")
+	viper.SetDefault("DB_USER", "postgres")
+	viper.SetDefault("DB_PASSWORD", "postgres")
+	viper.SetDefault("DB_NAME", "shance_db")
+	viper.SetDefault("DB_PORT", "5432")
+	viper.SetDefault("SERVER_PORT", "8000")
+
 	viper.SetConfigName(".env")
 	viper.SetConfigType("env")
 	viper.AddConfigPath(".")
 	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); err != nil {
-		return nil, fmt.Errorf("error reading config file: %w", err)
 	}
 
 	config := &Config{
@@ -35,4 +39,4 @@ func LoadConfig() (*Config, error) {
 	}
 
 	return config, nil
-} 
+}

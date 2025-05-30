@@ -1,0 +1,163 @@
+basePath: /api/v1
+definitions:
+  domain.Project:
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: API для управления проектами
+  title: Shance API
+  version: "1.0"
+paths:
+  /projects:
+    get:
+      description: Возвращает список всех проектов
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Project'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получение всех проектов
+      tags:
+      - projects
+    post:
+      consumes:
+      - application/json
+      description: Создает новый проект в системе
+      parameters:
+      - description: Данные проекта
+        in: body
+        name: project
+        required: true
+        schema:
+          $ref: '#/definitions/domain.Project'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/domain.Project'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Создание нового проекта
+      tags:
+      - projects
+  /projects/{id}:
+    delete:
+      description: Удаляет проект по указанному ID
+      parameters:
+      - description: ID проекта
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Удаление проекта
+      tags:
+      - projects
+    get:
+      description: Возвращает проект по указанному ID
+      parameters:
+      - description: ID проекта
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Project'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получение проекта по ID
+      tags:
+      - projects
+    put:
+      consumes:
+      - application/json
+      description: Обновляет данные существующего проекта
+      parameters:
+      - description: ID проекта
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Данные проекта
+        in: body
+        name: project
+        required: true
+        schema:
+          $ref: '#/definitions/domain.Project'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Project'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Обновление проекта
+      tags:
+      - projects
+schemes:
+- http
+swagger: "2.0"
