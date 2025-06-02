@@ -5,7 +5,7 @@ import (
 	"github.com/levstremilov/shance-app/internal/service"
 )
 
-func SetupRouter(authService *service.AuthService) *gin.Engine {
+func SetupRouter(authService *service.AuthService, projectService *service.ProjectService) *gin.Engine {
 	r := gin.Default()
 
 	authHandler := NewAuthHandler(authService)
@@ -19,7 +19,8 @@ func SetupRouter(authService *service.AuthService) *gin.Engine {
 	protected := r.Group("/api")
 	protected.Use(AuthMiddleware(authService))
 	{
-		// Здесь будут защищенные эндпоинты
+		projectHandler := NewProjectHandler(projectService)
+		protected.GET("/projects/search", projectHandler.SearchProjects)
 	}
 
 	return r

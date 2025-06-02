@@ -6,29 +6,59 @@ import (
 )
 
 type ProjectService struct {
-	repo *repository.ProjectRepository
+	projectRepo *repository.ProjectRepository
+	tagRepo     *repository.TagRepository
 }
 
-func NewProjectService(repo *repository.ProjectRepository) *ProjectService {
-	return &ProjectService{repo: repo}
+func NewProjectService(projectRepo *repository.ProjectRepository, tagRepo *repository.TagRepository) *ProjectService {
+	return &ProjectService{
+		projectRepo: projectRepo,
+		tagRepo:     tagRepo,
+	}
 }
 
-func (s *ProjectService) CreateProject(project *domain.Project) error {
-	return s.repo.Create(project)
+func (s *ProjectService) GetAll() ([]*domain.Project, error) {
+	return s.projectRepo.GetAll()
 }
 
-func (s *ProjectService) GetAllProjects() ([]domain.Project, error) {
-	return s.repo.GetAll()
+func (s *ProjectService) GetByID(id uint) (*domain.Project, error) {
+	return s.projectRepo.GetByID(id)
 }
 
-func (s *ProjectService) GetProjectByID(id uint) (*domain.Project, error) {
-	return s.repo.GetByID(id)
+func (s *ProjectService) Create(project *domain.Project) error {
+	if len(project.Tags) > 0 {
+		tagNames := make([]string, len(project.Tags))
+		for i, tag := range project.Tags {
+			tagNames[i] = tag.Name
+		}
+		tags, err := s.tagRepo.GetByNames(tagNames)
+		if err != nil {
+			return err
+		}
+		project.Tags = tags
+	}
+	return s.projectRepo.Create(project)
 }
 
-func (s *ProjectService) UpdateProject(project *domain.Project) error {
-	return s.repo.Update(project)
+func (s *ProjectService) Update(project *domain.Project) error {
+	if len(project.Tags) > 0 {
+		tagNames := make([]string, len(project.Tags))
+		for i, tag := range project.Tags {
+			tagNames[i] = tag.Name
+		}
+		tags, err := s.tagRepo.GetByNames(tagNames)
+		if err != nil {
+			return err
+		}
+		project.Tags = tags
+	}
+	return s.projectRepo.Update(project)
 }
 
-func (s *ProjectService) DeleteProject(id uint) error {
-	return s.repo.Delete(id)
+func (s *ProjectService) Delete(id uint) error {
+	return s.projectRepo.Delete(id)
+}
+
+func (s *ProjectService) Search(query string) ([]*domain.Project, error) {
+	return s.projectRepo.Search(query)
 }

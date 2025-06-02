@@ -17,7 +17,7 @@ const docTemplate = `{
     "paths": {
         "/auth/login": {
             "post": {
-                "description": "Аутентифицирует пользователя и возвращает токены",
+                "description": "Аутентифицирует пользователя и возвращает токены доступа",
                 "consumes": [
                     "application/json"
                 ],
@@ -49,28 +49,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/handler.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/handler.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/handler.ErrorResponse"
                         }
                     }
                 }
@@ -96,7 +87,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handler.RefreshRequest"
+                            "$ref": "#/definitions/handler.RefreshTokenRequest"
                         }
                     }
                 ],
@@ -139,7 +130,7 @@ const docTemplate = `{
         },
         "/auth/register": {
             "post": {
-                "description": "Создает нового пользователя и возвращает токены",
+                "description": "Создает нового пользователя и возвращает токены доступа",
                 "consumes": [
                     "application/json"
                 ],
@@ -162,8 +153,8 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "201": {
-                        "description": "Created",
+                    "200": {
+                        "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/domain.TokenPair"
                         }
@@ -171,19 +162,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/handler.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/handler.ErrorResponse"
                         }
                     }
                 }
@@ -192,6 +177,9 @@ const docTemplate = `{
         "/projects": {
             "get": {
                 "description": "Возвращает список всех проектов",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -205,17 +193,14 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/domain.Project"
+                                "$ref": "#/definitions/handler.ProjectResponse"
                             }
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/handler.ErrorResponse"
                         }
                     }
                 }
@@ -235,11 +220,11 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "description": "Данные проекта",
-                        "name": "project",
+                        "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.Project"
+                            "$ref": "#/definitions/handler.CreateProjectRequest"
                         }
                     }
                 ],
@@ -247,25 +232,66 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/domain.Project"
+                            "$ref": "#/definitions/handler.ProjectResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/handler.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/projects/search": {
+            "get": {
+                "description": "Возвращает список проектов, названия которых содержат поисковый запрос",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "projects"
+                ],
+                "summary": "Поиск проектов по названию",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Поисковый запрос",
+                        "name": "q",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handler.ProjectResponse"
                             }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
                         }
                     }
                 }
@@ -274,6 +300,9 @@ const docTemplate = `{
         "/projects/{id}": {
             "get": {
                 "description": "Возвращает проект по указанному ID",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -294,25 +323,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.Project"
+                            "$ref": "#/definitions/handler.ProjectResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/handler.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/handler.ErrorResponse"
                         }
                     }
                 }
@@ -339,11 +362,11 @@ const docTemplate = `{
                     },
                     {
                         "description": "Данные проекта",
-                        "name": "project",
+                        "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.Project"
+                            "$ref": "#/definitions/handler.UpdateProjectRequest"
                         }
                     }
                 ],
@@ -351,31 +374,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.Project"
+                            "$ref": "#/definitions/handler.ProjectResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/handler.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/handler.ErrorResponse"
                         }
                     }
                 }
             },
             "delete": {
                 "description": "Удаляет проект по указанному ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
                 "tags": [
                     "projects"
                 ],
@@ -396,19 +419,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/handler.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/handler.ErrorResponse"
                         }
                     }
                 }
@@ -416,9 +433,6 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "domain.Project": {
-            "type": "object"
-        },
         "domain.TokenPair": {
             "type": "object",
             "properties": {
@@ -426,6 +440,58 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "refresh_token": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.CreateProjectRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "example": "Описание проекта"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Новый проект"
+                },
+                "photo": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "['photo1.jpg'",
+                        " 'photo2.jpg']"
+                    ]
+                },
+                "subtitle": {
+                    "type": "string",
+                    "example": "Подзаголовок проекта"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "['tag1'",
+                        " 'tag2']"
+                    ]
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Заголовок проекта"
+                }
+            }
+        },
+        "handler.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
                     "type": "string"
                 }
             }
@@ -438,14 +504,69 @@ const docTemplate = `{
             ],
             "properties": {
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "user@example.com"
                 },
                 "password": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "password123"
                 }
             }
         },
-        "handler.RefreshRequest": {
+        "handler.ProjectResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string",
+                    "example": "2024-03-20T12:00:00Z"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Описание проекта"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Новый проект"
+                },
+                "photo": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "['photo1.jpg'",
+                        " 'photo2.jpg']"
+                    ]
+                },
+                "subtitle": {
+                    "type": "string",
+                    "example": "Подзаголовок проекта"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "['tag1'",
+                        " 'tag2']"
+                    ]
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Заголовок проекта"
+                },
+                "user_id": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "handler.RefreshTokenRequest": {
             "type": "object",
             "required": [
                 "refresh_token"
@@ -460,15 +581,94 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "email",
+                "first_name",
+                "last_name",
                 "password"
             ],
             "properties": {
+                "city": {
+                    "type": "string",
+                    "example": "Moscow"
+                },
+                "country": {
+                    "type": "string",
+                    "example": "Russia"
+                },
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "user@example.com"
+                },
+                "first_name": {
+                    "type": "string",
+                    "example": "John"
+                },
+                "last_name": {
+                    "type": "string",
+                    "example": "Doe"
                 },
                 "password": {
                     "type": "string",
-                    "minLength": 6
+                    "minLength": 6,
+                    "example": "password123"
+                },
+                "phone": {
+                    "type": "string",
+                    "example": "+79001234567"
+                },
+                "role": {
+                    "type": "string",
+                    "example": "user"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "['tag1'",
+                        " 'tag2']"
+                    ]
+                }
+            }
+        },
+        "handler.UpdateProjectRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "example": "Новое описание"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Обновленный проект"
+                },
+                "photo": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "['new_photo1.jpg'",
+                        " 'new_photo2.jpg']"
+                    ]
+                },
+                "subtitle": {
+                    "type": "string",
+                    "example": "Новый подзаголовок"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "['new_tag1'",
+                        " 'new_tag2']"
+                    ]
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Новый заголовок"
                 }
             }
         }
@@ -478,7 +678,7 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "localhost:8080",
+	Host:             "localhost:8000",
 	BasePath:         "/api/v1",
 	Schemes:          []string{"http"},
 	Title:            "Shance API",

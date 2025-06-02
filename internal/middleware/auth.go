@@ -10,21 +10,17 @@ import (
 
 func AuthMiddleware(authService *service.AuthService) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "authorization header is required"})
+		accessToken, err := c.Cookie("access_token")
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 			c.Abort()
 			return
 		}
 
-		headerParts := strings.Split(authHeader, " ")
-		if len(headerParts) != 2 || headerParts[0] != "Bearer" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid authorization header format"})
-			c.Abort()
-			return
-		}
+		// Убираем префикс "Bearer " если он есть
+		accessToken = strings.TrimPrefix(accessToken, "Bearer ")
 
-		claims, err := authService.ValidateToken(headerParts[1])
+		claims, err := authService.ValidateToken(accessToken)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
 			c.Abort()
@@ -32,7 +28,7 @@ func AuthMiddleware(authService *service.AuthService) gin.HandlerFunc {
 		}
 
 		c.Set("user_id", claims.UserID)
-		c.Set("email", claims.Email)
+		c.Set("user_role", claims.Role)
 		c.Next()
 	}
 }

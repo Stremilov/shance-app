@@ -3,7 +3,7 @@ package main
 // @title Shance API
 // @version 1.0
 // @description API для управления проектами
-// @host localhost:8080
+// @host localhost:8000
 // @BasePath /api/v1
 // @schemes http
 
@@ -11,12 +11,15 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/levstremilov/shance-app/docs"
 	"github.com/levstremilov/shance-app/internal/config"
 	"github.com/levstremilov/shance-app/internal/handler"
+	"github.com/levstremilov/shance-app/internal/middleware"
 	"github.com/levstremilov/shance-app/internal/repository"
 	"github.com/levstremilov/shance-app/internal/service"
+	_ "github.com/lib/pq"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
@@ -27,12 +30,17 @@ func setupRouter(
 	authService *service.AuthService,
 ) *gin.Engine {
 	r := gin.Default()
-
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:3000"},
+		AllowMethods:     []string{"GET", "POST", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type"},
+		AllowCredentials: true,
+	}))
 	// Swagger документация
 	docs.SwaggerInfo.Title = "Shance API"
 	docs.SwaggerInfo.Description = "API для управления проектами"
 	docs.SwaggerInfo.Version = "1.0"
-	docs.SwaggerInfo.Host = "localhost:8080"
+	docs.SwaggerInfo.Host = "localhost:8000"
 	docs.SwaggerInfo.BasePath = "/api/v1"
 	docs.SwaggerInfo.Schemes = []string{"http"}
 
@@ -50,13 +58,14 @@ func setupRouter(
 
 		// Защищенные маршруты
 		projects := api.Group("/projects")
-		projects.Use(handler.AuthMiddleware(authService))
+		projects.Use(middleware.AuthMiddleware(authService))
 		{
-			projects.POST("", projectHandler.Create)
-			projects.GET("", projectHandler.GetAll)
-			projects.GET("/:id", projectHandler.GetByID)
-			projects.PUT("/:id", projectHandler.Update)
-			projects.DELETE("/:id", projectHandler.Delete)
+			projects.POST("", projectHandler.CreateProject)
+			projects.GET("", projectHandler.GetProjects)
+			projects.GET("/search", projectHandler.SearchProjects)
+			projects.GET("/:id", projectHandler.GetProject)
+			projects.PUT("/:id", projectHandler.UpdateProject)
+			projects.DELETE("/:id", projectHandler.DeleteProject)
 		}
 	}
 	return r
@@ -68,12 +77,23 @@ func initDependencies(cfg *config.Config) (*handler.ProjectHandler, *handler.Aut
 		return nil, nil, nil, fmt.Errorf("failed to init db: %w", err)
 	}
 
+	// Очищаем базу данных
+	if err := config.CleanDB(db); err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to clean db: %w", err)
+	}
+
+	// Применяем миграции
+	if err := config.RunMigrations(db); err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to run migrations: %w", err)
+	}
+
 	// Инициализация репозиториев
 	projectRepo := repository.NewProjectRepository(db)
 	userRepo := repository.NewUserRepository(db)
+	tagRepo := repository.NewTagRepository(db)
 
 	// Инициализация сервисов
-	projectService := service.NewProjectService(projectRepo)
+	projectService := service.NewProjectService(projectRepo, tagRepo)
 	authService := service.NewAuthService(
 		userRepo,
 		cfg.JWT.Secret,

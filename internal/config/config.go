@@ -1,6 +1,7 @@
 package config
 
 import (
+	"os"
 	"time"
 
 	"github.com/spf13/viper"
@@ -31,60 +32,33 @@ type JWTConfig struct {
 }
 
 func LoadConfig() (*Config, error) {
-	viper.SetConfigName("config")
-	viper.SetConfigType("yaml")
-	viper.AddConfigPath(".")
-	viper.AddConfigPath("./config")
 	viper.AutomaticEnv()
-
-	// Устанавливаем префиксы для переменных окружения
-	viper.SetEnvPrefix("SHANCE")
-	viper.BindEnv("server.port", "SHANCE_SERVER_PORT")
-	viper.BindEnv("database.host", "SHANCE_DB_HOST")
-	viper.BindEnv("database.port", "SHANCE_DB_PORT")
-	viper.BindEnv("database.user", "SHANCE_DB_USER")
-	viper.BindEnv("database.password", "SHANCE_DB_PASSWORD")
-	viper.BindEnv("database.dbname", "SHANCE_DB_NAME")
-	viper.BindEnv("jwt.secret", "SHANCE_JWT_SECRET")
-	viper.BindEnv("jwt.access_token_ttl", "SHANCE_JWT_ACCESS_TTL")
-	viper.BindEnv("jwt.refresh_token_ttl", "SHANCE_JWT_REFRESH_TTL")
-
-	// Устанавливаем значения по умолчанию
-	viper.SetDefault("server.port", "8000")
-	viper.SetDefault("database.host", "localhost")
-	viper.SetDefault("database.port", "5432")
-	viper.SetDefault("database.user", "postgres")
-	viper.SetDefault("database.password", "postgres")
-	viper.SetDefault("database.dbname", "shance_db")
-	viper.SetDefault("jwt.secret", "your-secret-key")
-	viper.SetDefault("jwt.access_token_ttl", "15m")
-	viper.SetDefault("jwt.refresh_token_ttl", "720h")
-
-	// Пытаемся прочитать конфигурационный файл
-	if err := viper.ReadInConfig(); err != nil {
-		// Если файл не найден, это не ошибка, так как у нас есть значения по умолчанию
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			return nil, err
-		}
-	}
 
 	config := &Config{
 		Server: ServerConfig{
-			Port: viper.GetString("server.port"),
+			Port: getEnv("SERVER_PORT", "8000"),
 		},
 		Database: DatabaseConfig{
-			Host:     viper.GetString("database.host"),
-			Port:     viper.GetString("database.port"),
-			User:     viper.GetString("database.user"),
-			Password: viper.GetString("database.password"),
-			DBName:   viper.GetString("database.dbname"),
+			Host:     getEnv("DB_HOST", "db"),
+			Port:     getEnv("DB_PORT", "5432"),
+			User:     getEnv("DB_USER", "postgres"),
+			Password: getEnv("DB_PASSWORD", "postgres"),
+			DBName:   getEnv("DB_NAME", "shance_db"),
 		},
 		JWT: JWTConfig{
-			Secret:          viper.GetString("jwt.secret"),
-			AccessTokenTTL:  viper.GetDuration("jwt.access_token_ttl"),
-			RefreshTokenTTL: viper.GetDuration("jwt.refresh_token_ttl"),
+			Secret:          getEnv("JWT_SECRET", "your-secret-key"),
+			AccessTokenTTL:  time.Duration(15) * time.Minute,
+			RefreshTokenTTL: time.Duration(720) * time.Hour,
 		},
 	}
 
 	return config, nil
+}
+
+func getEnv(key, defaultValue string) string {
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue
+	}
+	return value
 }

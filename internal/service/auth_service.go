@@ -6,52 +6,60 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/levstremilov/shance-app/internal/domain"
+	"github.com/levstremilov/shance-app/internal/repository"
 	"golang.org/x/crypto/bcrypt"
 )
-
-type AuthService struct {
-	userRepo        UserRepository
-	jwtSecret       []byte
-	accessTokenTTL  time.Duration
-	refreshTokenTTL time.Duration
-}
-
-type UserRepository interface {
-	Create(user *domain.User) error
-	GetByEmail(email string) (*domain.User, error)
-	GetByID(id uint) (*domain.User, error)
-}
-
-func NewAuthService(
-	userRepo UserRepository,
-	jwtSecret string,
-	accessTokenTTL time.Duration,
-	refreshTokenTTL time.Duration,
-) *AuthService {
-	return &AuthService{
-		userRepo:        userRepo,
-		jwtSecret:       []byte(jwtSecret),
-		accessTokenTTL:  accessTokenTTL,
-		refreshTokenTTL: refreshTokenTTL,
-	}
-}
 
 type Claims struct {
 	UserID uint   `json:"user_id"`
 	Email  string `json:"email"`
-	Type   string `json:"type"` // "access" или "refresh"
+	Role   string `json:"role"`
 	jwt.RegisteredClaims
 }
 
-func (s *AuthService) Register(email, password string) (*domain.TokenPair, error) {
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+type AuthService struct {
+	userRepo   *repository.UserRepository
+	jwtSecret  []byte
+	accessTTL  time.Duration
+	refreshTTL time.Duration
+}
+
+func NewAuthService(userRepo *repository.UserRepository, jwtSecret string, accessTTL, refreshTTL time.Duration) *AuthService {
+	return &AuthService{
+		userRepo:   userRepo,
+		jwtSecret:  []byte(jwtSecret),
+		accessTTL:  accessTTL,
+		refreshTTL: refreshTTL,
+	}
+}
+
+type RegisterData struct {
+	Email     string
+	Password  string
+	FirstName string
+	LastName  string
+	Phone     string
+	Role      string
+	Tags      []string
+	Country   string
+	City      string
+}
+
+func (s *AuthService) Register(data RegisterData) (*domain.TokenPair, error) {
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(data.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return nil, err
 	}
 
 	user := &domain.User{
-		Email:        email,
+		Email:        data.Email,
 		PasswordHash: string(hashedPassword),
+		FirstName:    data.FirstName,
+		LastName:     data.LastName,
+		Phone:        data.Phone,
+		Role:         data.Role,
+		Country:      data.Country,
+		City:         data.City,
 	}
 
 	if err := s.userRepo.Create(user); err != nil {
@@ -64,7 +72,7 @@ func (s *AuthService) Register(email, password string) (*domain.TokenPair, error
 func (s *AuthService) Login(email, password string) (*domain.TokenPair, error) {
 	user, err := s.userRepo.GetByEmail(email)
 	if err != nil {
-		return nil, errors.New("invalid credentials")
+		return nil, err
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
@@ -75,16 +83,25 @@ func (s *AuthService) Login(email, password string) (*domain.TokenPair, error) {
 }
 
 func (s *AuthService) RefreshToken(refreshToken string) (*domain.TokenPair, error) {
-	claims, err := s.validateToken(refreshToken)
+	token, err := jwt.Parse(refreshToken, func(token *jwt.Token) (interface{}, error) {
+		return s.jwtSecret, nil
+	})
+
 	if err != nil {
-		return nil, errors.New("invalid refresh token")
+		return nil, err
 	}
 
-	if claims.Type != "refresh" {
-		return nil, errors.New("invalid token type")
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok || !token.Valid {
+		return nil, errors.New("invalid token")
 	}
 
-	user, err := s.userRepo.GetByID(claims.UserID)
+	userID, ok := claims["user_id"].(float64)
+	if !ok {
+		return nil, errors.New("invalid token claims")
+	}
+
+	user, err := s.userRepo.GetByID(uint(userID))
 	if err != nil {
 		return nil, err
 	}
@@ -93,61 +110,37 @@ func (s *AuthService) RefreshToken(refreshToken string) (*domain.TokenPair, erro
 }
 
 func (s *AuthService) generateTokenPair(user *domain.User) (*domain.TokenPair, error) {
-	// Генерируем access token
-	accessClaims := &Claims{
-		UserID: user.ID,
-		Email:  user.Email,
-		Type:   "access",
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(s.accessTokenTTL)),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-		},
-	}
-
-	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims)
-	accessTokenString, err := accessToken.SignedString(s.jwtSecret)
+	accessToken, err := s.generateToken(user, s.accessTTL)
 	if err != nil {
 		return nil, err
 	}
 
-	// Генерируем refresh token
-	refreshClaims := &Claims{
-		UserID: user.ID,
-		Email:  user.Email,
-		Type:   "refresh",
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(s.refreshTokenTTL)),
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
-		},
-	}
-
-	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims)
-	refreshTokenString, err := refreshToken.SignedString(s.jwtSecret)
+	refreshToken, err := s.generateToken(user, s.refreshTTL)
 	if err != nil {
 		return nil, err
 	}
 
 	return &domain.TokenPair{
-		AccessToken:  accessTokenString,
-		RefreshToken: refreshTokenString,
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
 	}, nil
 }
 
-func (s *AuthService) ValidateToken(tokenString string) (*Claims, error) {
-	claims, err := s.validateToken(tokenString)
-	if err != nil {
-		return nil, err
+func (s *AuthService) generateToken(user *domain.User, ttl time.Duration) (string, error) {
+	claims := jwt.MapClaims{
+		"user_id": user.ID,
+		"email":   user.Email,
+		"role":    user.Role,
+		"exp":     time.Now().Add(ttl).Unix(),
 	}
 
-	if claims.Type != "access" {
-		return nil, errors.New("invalid token type")
-	}
-
-	return claims, nil
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(s.jwtSecret)
 }
 
-func (s *AuthService) validateToken(tokenString string) (*Claims, error) {
-	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
+func (s *AuthService) ValidateToken(tokenString string) (*Claims, error) {
+	claims := &Claims{}
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
 		return s.jwtSecret, nil
 	})
 
@@ -155,9 +148,9 @@ func (s *AuthService) validateToken(tokenString string) (*Claims, error) {
 		return nil, err
 	}
 
-	if claims, ok := token.Claims.(*Claims); ok && token.Valid {
-		return claims, nil
+	if !token.Valid {
+		return nil, errors.New("invalid token")
 	}
 
-	return nil, errors.New("invalid token")
+	return claims, nil
 }
