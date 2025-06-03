@@ -27,7 +27,7 @@ import (
 func setupRouter(
 	projectHandler *handler.ProjectHandler,
 	authHandler *handler.AuthHandler,
-	authService *service.AuthService,
+	authService service.AuthServiceInterface,
 ) *gin.Engine {
 	r := gin.Default()
 	r.Use(cors.New(cors.Config{
@@ -71,7 +71,7 @@ func setupRouter(
 	return r
 }
 
-func initDependencies(cfg *config.Config) (*handler.ProjectHandler, *handler.AuthHandler, *service.AuthService, error) {
+func initDependencies(cfg *config.Config) (*handler.ProjectHandler, *handler.AuthHandler, service.AuthServiceInterface, error) {
 	db, err := config.InitDB(cfg)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("failed to init db: %w", err)
