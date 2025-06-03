@@ -42,12 +42,12 @@ type UpdateUserRequest struct {
 func (h *UserHandler) GetMe(c *gin.Context) {
 	_, exists := c.Get("user_id")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
+		c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "user not authenticated"})
 		return
 	}
 	user, err := h.userService.GetMe(c)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, user)
@@ -74,6 +74,7 @@ func (h *UserHandler) GetByID(c *gin.Context) {
 	user, err := h.userService.GetByID(uint(id))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	}
 	c.JSON(http.StatusOK, user)
 }
@@ -93,7 +94,7 @@ func (h *UserHandler) GetByID(c *gin.Context) {
 func (h *UserHandler) UpdateMe(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
+		c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "user not authenticated"})
 		return
 	}
 
@@ -103,26 +104,35 @@ func (h *UserHandler) UpdateMe(c *gin.Context) {
 		return
 	}
 
-	tags := make([]domain.Tag, len(req.Tags))
-	for i, tagName := range req.Tags {
-		tags[i] = domain.Tag{Name: tagName}
-	}
-
-	user := &domain.User{
-		ID:        userID.(uint),
-		FirstName: req.FirstName,
-		LastName:  req.LastName,
-		Phone:     req.Phone,
-		Role:      req.Role,
-		Tags:      tags,
-		Country:   req.Country,
-		City:      req.City,
-	}
-
-	if err := h.userService.UpdateByID(userID.(uint), user); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	// Получаем текущие данные пользователя
+	currentUser, err := h.userService.GetByID(userID.(uint))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, user)
+	// Обновляем поля, не переданные поля будут пустыми
+	currentUser.FirstName = req.FirstName
+	currentUser.LastName = req.LastName
+	currentUser.Phone = req.Phone
+	currentUser.Role = req.Role
+	currentUser.Country = req.Country
+	currentUser.City = req.City
+
+	if len(req.Tags) > 0 {
+		tags := make([]domain.Tag, len(req.Tags))
+		for i, tagName := range req.Tags {
+			tags[i] = domain.Tag{Name: tagName}
+		}
+		currentUser.Tags = tags
+	} else {
+		currentUser.Tags = []domain.Tag{}
+	}
+
+	if err := h.userService.UpdateByID(userID.(uint), currentUser); err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, currentUser)
 }
