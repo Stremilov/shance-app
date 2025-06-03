@@ -17,6 +17,13 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
+type AuthServiceInterface interface {
+	Register(data RegisterData) (*domain.TokenPair, error)
+	Login(email, password string) (*domain.TokenPair, error)
+	RefreshToken(token string) (*domain.TokenPair, error)
+	ValidateToken(token string) (*Claims, error)
+}
+
 type AuthService struct {
 	userRepo   *repository.UserRepository
 	jwtSecret  []byte
@@ -24,7 +31,7 @@ type AuthService struct {
 	refreshTTL time.Duration
 }
 
-func NewAuthService(userRepo *repository.UserRepository, jwtSecret string, accessTTL, refreshTTL time.Duration) *AuthService {
+func NewAuthService(userRepo *repository.UserRepository, jwtSecret string, accessTTL, refreshTTL time.Duration) AuthServiceInterface {
 	return &AuthService{
 		userRepo:   userRepo,
 		jwtSecret:  []byte(jwtSecret),
