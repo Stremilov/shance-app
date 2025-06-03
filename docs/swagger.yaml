@@ -1,11 +1,36 @@
 basePath: /api/v1
 definitions:
-  domain.TokenPair:
+  domain.Tag:
     properties:
-      access_token:
+      id:
+        type: integer
+      name:
         type: string
-      refresh_token:
+    type: object
+  domain.User:
+    properties:
+      city:
         type: string
+      country:
+        type: string
+      created_at:
+        type: string
+      email:
+        type: string
+      first_name:
+        type: string
+      id:
+        type: integer
+      last_name:
+        type: string
+      phone:
+        type: string
+      role:
+        type: string
+      tags:
+        items:
+          $ref: '#/definitions/domain.Tag'
+        type: array
     type: object
   handler.CreateProjectRequest:
     properties:
@@ -89,6 +114,8 @@ definitions:
       title:
         example: Заголовок проекта
         type: string
+      user:
+        $ref: '#/definitions/handler.UserResponse'
       user_id:
         example: 1
         type: integer
@@ -140,6 +167,13 @@ definitions:
     - last_name
     - password
     type: object
+  handler.TokenResponse:
+    properties:
+      access_token:
+        type: string
+      refresh_token:
+        type: string
+    type: object
   handler.UpdateProjectRequest:
     properties:
       description:
@@ -169,6 +203,49 @@ definitions:
         example: Новый заголовок
         type: string
     type: object
+  handler.UpdateUserRequest:
+    properties:
+      city:
+        example: Санкт-Петербург
+        type: string
+      description:
+        example: Новая роль
+        type: string
+      name:
+        example: Новое имя
+        type: string
+      photo:
+        example:
+        - new_photo1.jpg
+        - ' new_photo2.jpg'
+        items:
+          type: string
+        type: array
+      subtitle:
+        example: Новый номер телефона
+        type: string
+      tags:
+        example: new_tag1, new_tag2
+        type: string
+      title:
+        example: Новая фамилия
+        type: string
+    type: object
+  handler.UserResponse:
+    properties:
+      email:
+        example: ivan@example.com
+        type: string
+      first_name:
+        example: Иван
+        type: string
+      id:
+        example: 1
+        type: integer
+      last_name:
+        example: Иванов
+        type: string
+    type: object
 host: localhost:8000
 info:
   contact: {}
@@ -180,7 +257,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: Аутентифицирует пользователя и возвращает токены доступа
+      description: Аутентифицирует пользователя и возвращает refresh token
       parameters:
       - description: Данные для входа
         in: body
@@ -194,7 +271,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/domain.TokenPair'
+            $ref: '#/definitions/handler.TokenResponse'
         "400":
           description: Bad Request
           schema:
@@ -228,7 +305,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/domain.TokenPair'
+            $ref: '#/definitions/handler.TokenResponse'
         "400":
           description: Bad Request
           schema:
@@ -254,7 +331,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: Создает нового пользователя и возвращает токены доступа
+      description: Создает нового пользователя и возвращает refresh token
       parameters:
       - description: Данные для регистрации
         in: body
@@ -268,7 +345,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/domain.TokenPair'
+            $ref: '#/definitions/handler.TokenResponse'
         "400":
           description: Bad Request
           schema:
@@ -451,6 +528,91 @@ paths:
       summary: Поиск проектов по названию
       tags:
       - projects
+  /users/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает данные пользователя по указанному ID
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.User'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Получение пользователя по ID
+      tags:
+      - users
+  /users/me:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает данные авторизованного пользователя
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.User'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Получение данных текущего пользователя
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      description: Обновляет данные авторизованного пользователя
+      parameters:
+      - description: Данные пользователя
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.User'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Обновление данных текущего пользователя
+      tags:
+      - users
 schemes:
 - http
 swagger: "2.0"
