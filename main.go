@@ -28,6 +28,7 @@ func setupRouter(
 	projectHandler *handler.ProjectHandler,
 	authHandler *handler.AuthHandler,
 	authService service.AuthServiceInterface,
+	userHandler *handler.UserHandler,
 ) *gin.Engine {
 	r := gin.Default()
 	r.Use(cors.New(cors.Config{
@@ -56,6 +57,14 @@ func setupRouter(
 			auth.POST("/refresh", authHandler.RefreshToken)
 		}
 
+		users := api.Group("/users")
+		users.Use(middleware.AuthMiddleware(authService))
+		{
+			users.GET("/me", userHandler.GetMe)
+			users.GET("/:id", userHandler.GetByID)
+			users.PATCH("/update", userHandler.UpdateMe)
+		}
+
 		// Защищенные маршруты
 		projects := api.Group("/projects")
 		projects.Use(middleware.AuthMiddleware(authService))
@@ -71,20 +80,20 @@ func setupRouter(
 	return r
 }
 
-func initDependencies(cfg *config.Config) (*handler.ProjectHandler, *handler.AuthHandler, service.AuthServiceInterface, error) {
+func initDependencies(cfg *config.Config) (*handler.ProjectHandler, *handler.AuthHandler, service.AuthServiceInterface, *handler.UserHandler, error) {
 	db, err := config.InitDB(cfg)
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to init db: %w", err)
+		return nil, nil, nil, nil, fmt.Errorf("failed to init db: %w", err)
 	}
 
 	// Очищаем базу данных
 	if err := config.CleanDB(db); err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to clean db: %w", err)
+		return nil, nil, nil, nil, fmt.Errorf("failed to clean db: %w", err)
 	}
 
 	// Применяем миграции
 	if err := config.RunMigrations(db); err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to run migrations: %w", err)
+		return nil, nil, nil, nil, fmt.Errorf("failed to run migrations: %w", err)
 	}
 
 	// Инициализация репозиториев
@@ -100,12 +109,14 @@ func initDependencies(cfg *config.Config) (*handler.ProjectHandler, *handler.Aut
 		cfg.JWT.AccessTokenTTL,
 		cfg.JWT.RefreshTokenTTL,
 	)
+	userService := service.NewUserService(userRepo)
 
 	// Инициализация обработчиков
 	projectHandler := handler.NewProjectHandler(projectService)
 	authHandler := handler.NewAuthHandler(authService)
+	userHandler := handler.NewUserHandler(userService)
 
-	return projectHandler, authHandler, authService, nil
+	return projectHandler, authHandler, authService, userHandler, nil
 }
 
 func main() {
@@ -114,12 +125,12 @@ func main() {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	projectHandler, authHandler, authService, err := initDependencies(cfg)
+	projectHandler, authHandler, authService, userHandler, err := initDependencies(cfg)
 	if err != nil {
 		log.Fatalf("Failed to init dependencies: %v", err)
 	}
 
-	r := setupRouter(projectHandler, authHandler, authService)
+	r := setupRouter(projectHandler, authHandler, authService, userHandler)
 	if err := r.Run(fmt.Sprintf(":%s", cfg.Server.Port)); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
