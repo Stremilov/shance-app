@@ -13,10 +13,10 @@ type ErrorResponse struct {
 }
 
 type AuthHandler struct {
-	authService *service.AuthService
+	authService service.AuthServiceInterface
 }
 
-func NewAuthHandler(authService *service.AuthService) *AuthHandler {
+func NewAuthHandler(authService service.AuthServiceInterface) *AuthHandler {
 	return &AuthHandler{
 		authService: authService,
 	}
@@ -44,6 +44,7 @@ type RefreshTokenRequest struct {
 }
 
 type TokenResponse struct {
+	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
 }
 
@@ -83,7 +84,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 
 	c.SetSameSite(http.SameSiteLaxMode)
 	c.SetCookie("access_token", tokens.AccessToken, int((time.Hour * 24).Seconds()), "/", "", false, true)
-	c.JSON(http.StatusOK, TokenResponse{RefreshToken: tokens.RefreshToken})
+	c.JSON(http.StatusOK, TokenResponse{AccessToken: tokens.AccessToken, RefreshToken: tokens.RefreshToken})
 }
 
 // Login godoc
@@ -113,7 +114,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	c.SetSameSite(http.SameSiteLaxMode)
 	c.SetCookie("access_token", tokens.AccessToken, int((time.Hour * 24).Seconds()), "/", "", false, true)
-	c.JSON(http.StatusOK, TokenResponse{RefreshToken: tokens.RefreshToken})
+	c.JSON(http.StatusOK, TokenResponse{AccessToken: tokens.AccessToken, RefreshToken: tokens.RefreshToken})
 }
 
 // Refresh godoc
@@ -143,5 +144,5 @@ func (h *AuthHandler) RefreshToken(c *gin.Context) {
 
 	c.SetSameSite(http.SameSiteLaxMode)
 	c.SetCookie("access_token", tokens.AccessToken, int((time.Hour * 24).Seconds()), "/", "", false, true)
-	c.JSON(http.StatusOK, TokenResponse{RefreshToken: tokens.RefreshToken})
+	c.JSON(http.StatusOK, TokenResponse{AccessToken: tokens.AccessToken, RefreshToken: tokens.RefreshToken})
 }

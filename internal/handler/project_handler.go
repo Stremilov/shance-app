@@ -13,7 +13,7 @@ import (
 
 // ProjectHandler представляет обработчик для работы с проектами
 type ProjectHandler struct {
-	projectService *service.ProjectService
+	projectService service.ProjectServiceInterface
 }
 
 // CreateProjectRequest представляет запрос на создание проекта
@@ -58,7 +58,7 @@ type UserResponse struct {
 }
 
 // NewProjectHandler создает новый экземпляр ProjectHandler
-func NewProjectHandler(projectService *service.ProjectService) *ProjectHandler {
+func NewProjectHandler(projectService service.ProjectServiceInterface) *ProjectHandler {
 	return &ProjectHandler{
 		projectService: projectService,
 	}

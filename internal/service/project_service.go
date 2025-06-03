@@ -5,12 +5,21 @@ import (
 	"github.com/levstremilov/shance-app/internal/repository"
 )
 
+type ProjectServiceInterface interface {
+	GetAll() ([]*domain.Project, error)
+	GetByID(id uint) (*domain.Project, error)
+	Create(project *domain.Project) error
+	Update(project *domain.Project) error
+	Delete(id uint) error
+	Search(query string) ([]*domain.Project, error)
+}
+
 type ProjectService struct {
 	projectRepo *repository.ProjectRepository
 	tagRepo     *repository.TagRepository
 }
 
-func NewProjectService(projectRepo *repository.ProjectRepository, tagRepo *repository.TagRepository) *ProjectService {
+func NewProjectService(projectRepo *repository.ProjectRepository, tagRepo *repository.TagRepository) ProjectServiceInterface {
 	return &ProjectService{
 		projectRepo: projectRepo,
 		tagRepo:     tagRepo,
