@@ -8,7 +8,7 @@ import (
 	"github.com/levstremilov/shance-app/internal/service"
 )
 
-func AuthMiddleware(authService *service.AuthService) gin.HandlerFunc {
+func AuthMiddleware(authService service.AuthServiceInterface) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		accessToken, err := c.Cookie("access_token")
 		if err != nil {
