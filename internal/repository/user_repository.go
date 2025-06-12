@@ -1,7 +1,8 @@
 package repository
 
 import (
-	"github.com/levstremilov/shance-app/internal/domain"
+	"github.com/levstremilov/shance-app/internal/models"
+
 	"gorm.io/gorm"
 )
 
@@ -13,26 +14,38 @@ func NewUserRepository(db *gorm.DB) *UserRepository {
 	return &UserRepository{db: db}
 }
 
-func (r *UserRepository) Create(user *domain.User) error {
+func (r *UserRepository) Create(user *models.User) error {
 	return r.db.Create(user).Error
 }
 
-func (r *UserRepository) GetByID(id uint) (*domain.User, error) {
-	var user domain.User
-	if err := r.db.Model(&domain.User{}).Where("id = ?", id).First(&user).Error; err != nil {
+func (r *UserRepository) GetByID(id uint) (*models.User, error) {
+	var user models.User
+	if err := r.db.First(&user, id).Error; err != nil {
 		return nil, err
 	}
 	return &user, nil
 }
 
-func (r *UserRepository) GetByEmail(email string) (*domain.User, error) {
-	var user domain.User
-	if err := r.db.Model(&domain.User{}).Where("email = ?", email).First(&user).Error; err != nil {
+func (r *UserRepository) GetByEmail(email string) (*models.User, error) {
+	var user models.User
+	if err := r.db.Where("email = ?", email).First(&user).Error; err != nil {
 		return nil, err
 	}
 	return &user, nil
 }
 
-func (r *UserRepository) UpdateByID(id uint, user *domain.User) error {
-	return r.db.Model(&domain.User{}).Where("id = ?", id).Updates(user).Error
+func (r *UserRepository) Update(user *models.User) error {
+	return r.db.Save(user).Error
+}
+
+func (r *UserRepository) Delete(id uint) error {
+	return r.db.Delete(&models.User{}, id).Error
+}
+
+func (r *UserRepository) List() ([]models.User, error) {
+	var users []models.User
+	if err := r.db.Find(&users).Error; err != nil {
+		return nil, err
+	}
+	return users, nil
 }

@@ -10,11 +10,13 @@ package main
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/levstremilov/shance-app/docs"
 	"github.com/levstremilov/shance-app/internal/config"
+	"github.com/levstremilov/shance-app/internal/database"
 	"github.com/levstremilov/shance-app/internal/handler"
 	"github.com/levstremilov/shance-app/internal/middleware"
 	"github.com/levstremilov/shance-app/internal/repository"
@@ -22,34 +24,43 @@ import (
 	_ "github.com/lib/pq"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+	"gorm.io/gorm"
 )
 
 func setupRouter(
 	projectHandler *handler.ProjectHandler,
 	authHandler *handler.AuthHandler,
-	authService service.AuthServiceInterface,
 	userHandler *handler.UserHandler,
+	tagHandler *handler.TagHandler,
+	authService service.AuthServiceInterface,
+	cfg *config.Config,
 ) *gin.Engine {
 	r := gin.Default()
+
+	// CORS
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000"},
-		AllowMethods:     []string{"GET", "POST", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type"},
+		AllowOrigins:     []string{"*"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
 	}))
-	// Swagger документация
+
+	// Swagger
 	docs.SwaggerInfo.Title = "Shance API"
 	docs.SwaggerInfo.Description = "API для управления проектами"
 	docs.SwaggerInfo.Version = "1.0"
-	docs.SwaggerInfo.Host = "localhost:8000"
+	docs.SwaggerInfo.Host = fmt.Sprintf("%s:%s", cfg.Server.Host, cfg.Server.Port)
 	docs.SwaggerInfo.BasePath = "/api/v1"
 	docs.SwaggerInfo.Schemes = []string{"http"}
 
 	r.GET("/api/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
+	// API v1
 	api := r.Group("/api/v1")
 	{
-		// Публичные маршруты
+		// Auth routes
 		auth := api.Group("/auth")
 		{
 			auth.POST("/register", authHandler.Register)
@@ -57,66 +68,63 @@ func setupRouter(
 			auth.POST("/refresh", authHandler.RefreshToken)
 		}
 
-		users := api.Group("/users")
-		users.Use(middleware.AuthMiddleware(authService))
+		// Protected routes
+		protected := api.Group("")
+		protected.Use(middleware.AuthMiddleware(authService))
 		{
-			users.GET("/me", userHandler.GetMe)
-			users.GET("/:id", userHandler.GetByID)
-			users.PATCH("/update", userHandler.UpdateMe)
-		}
+			// User routes
+			users := protected.Group("/users")
+			{
+				users.GET("/me", userHandler.GetMe)
+				users.PUT("/me", userHandler.UpdateMe)
+				users.GET("/:id", userHandler.GetUser)
+			}
 
-		// Защищенные маршруты
-		projects := api.Group("/projects")
-		projects.Use(middleware.AuthMiddleware(authService))
-		{
-			projects.POST("", projectHandler.CreateProject)
-			projects.GET("", projectHandler.GetProjects)
-			projects.GET("/search", projectHandler.SearchProjects)
-			projects.GET("/:id", projectHandler.GetProject)
-			projects.PUT("/:id", projectHandler.UpdateProject)
-			projects.DELETE("/:id", projectHandler.DeleteProject)
+			// Project routes
+			projects := protected.Group("/projects")
+			{
+				projects.POST("", projectHandler.CreateProject)
+				projects.GET("", projectHandler.GetProjects)
+				projects.GET("/:id", projectHandler.GetProject)
+				projects.PUT("/:id", projectHandler.UpdateProject)
+				projects.DELETE("/:id", projectHandler.DeleteProject)
+				projects.GET("/search", projectHandler.SearchProjects)
+				projects.POST("/:id/invite", projectHandler.InviteMember)
+				projects.GET("/:id/members", projectHandler.GetProjectMembers)
+			}
+
+			// Tag routes
+			tags := protected.Group("/tags")
+			{
+				tags.POST("", tagHandler.CreateTag)
+				tags.GET("", tagHandler.ListTags)
+				tags.GET("/search", tagHandler.SearchTags)
+				tags.GET("/:id", tagHandler.GetTag)
+				tags.PUT("/:id", tagHandler.UpdateTag)
+				tags.DELETE("/:id", tagHandler.DeleteTag)
+			}
 		}
 	}
+
 	return r
 }
 
-func initDependencies(cfg *config.Config) (*handler.ProjectHandler, *handler.AuthHandler, service.AuthServiceInterface, *handler.UserHandler, error) {
-	db, err := config.InitDB(cfg)
-	if err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("failed to init db: %w", err)
-	}
-
-	// Очищаем базу данных
-	if err := config.CleanDB(db); err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("failed to clean db: %w", err)
-	}
-
-	// Применяем миграции
-	if err := config.RunMigrations(db); err != nil {
-		return nil, nil, nil, nil, fmt.Errorf("failed to run migrations: %w", err)
-	}
-
-	// Инициализация репозиториев
-	projectRepo := repository.NewProjectRepository(db)
+func initDependencies(db *gorm.DB) (*handler.AuthHandler, *handler.UserHandler, *handler.ProjectHandler, *handler.TagHandler, service.AuthServiceInterface) {
 	userRepo := repository.NewUserRepository(db)
+	projectRepo := repository.NewProjectRepository(db)
 	tagRepo := repository.NewTagRepository(db)
 
-	// Инициализация сервисов
-	projectService := service.NewProjectService(projectRepo, tagRepo)
-	authService := service.NewAuthService(
-		userRepo,
-		cfg.JWT.Secret,
-		cfg.JWT.AccessTokenTTL,
-		cfg.JWT.RefreshTokenTTL,
-	)
+	authService := service.NewAuthService(userRepo, "your-secret-key", 24*time.Hour, 168*time.Hour)
 	userService := service.NewUserService(userRepo)
+	projectService := service.NewProjectService(projectRepo, tagRepo)
+	tagService := service.NewTagService(tagRepo)
 
-	// Инициализация обработчиков
-	projectHandler := handler.NewProjectHandler(projectService)
 	authHandler := handler.NewAuthHandler(authService)
 	userHandler := handler.NewUserHandler(userService)
+	projectHandler := handler.NewProjectHandler(projectService)
+	tagHandler := handler.NewTagHandler(tagService)
 
-	return projectHandler, authHandler, authService, userHandler, nil
+	return authHandler, userHandler, projectHandler, tagHandler, authService
 }
 
 func main() {
@@ -125,12 +133,14 @@ func main() {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
-	projectHandler, authHandler, authService, userHandler, err := initDependencies(cfg)
+	db, err := database.InitDB(cfg)
 	if err != nil {
-		log.Fatalf("Failed to init dependencies: %v", err)
+		log.Fatalf("Failed to initialize database: %v", err)
 	}
 
-	r := setupRouter(projectHandler, authHandler, authService, userHandler)
+	authHandler, userHandler, projectHandler, tagHandler, authService := initDependencies(db)
+
+	r := setupRouter(projectHandler, authHandler, userHandler, tagHandler, authService, cfg)
 	if err := r.Run(fmt.Sprintf(":%s", cfg.Server.Port)); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}

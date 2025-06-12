@@ -3,62 +3,66 @@ package config
 import (
 	"os"
 	"time"
-
-	"github.com/spf13/viper"
 )
 
 type Config struct {
-	Server   ServerConfig
-	Database DatabaseConfig
-	JWT      JWTConfig
+	Database struct {
+		Host     string
+		Port     string
+		User     string
+		Password string
+		DBName   string
+	}
+	Server struct {
+		Host string
+		Port string
+	}
+	JWT struct {
+		Secret          string
+		AccessTokenTTL  time.Duration
+		RefreshTokenTTL time.Duration
+	}
 }
 
-type ServerConfig struct {
-	Port string
-}
-
-type DatabaseConfig struct {
-	Host     string
-	Port     string
-	User     string
-	Password string
-	DBName   string
-}
-
-type JWTConfig struct {
-	Secret          string
-	AccessTokenTTL  time.Duration
-	RefreshTokenTTL time.Duration
+func getEnv(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
 }
 
 func LoadConfig() (*Config, error) {
-	viper.AutomaticEnv()
-
 	config := &Config{
-		Server: ServerConfig{
-			Port: getEnv("SERVER_PORT", "8000"),
-		},
-		Database: DatabaseConfig{
-			Host:     getEnv("DB_HOST", "db"),
+		Database: struct {
+			Host     string
+			Port     string
+			User     string
+			Password string
+			DBName   string
+		}{
+			Host:     getEnv("DB_HOST", "localhost"),
 			Port:     getEnv("DB_PORT", "5432"),
-			User:     getEnv("DB_USER", "postgres"),
+			User:     getEnv("DB_USER", "levstremilov"),
 			Password: getEnv("DB_PASSWORD", "postgres"),
 			DBName:   getEnv("DB_NAME", "shance_db"),
 		},
-		JWT: JWTConfig{
+		Server: struct {
+			Host string
+			Port string
+		}{
+			Host: getEnv("SERVER_HOST", "localhost"),
+			Port: getEnv("SERVER_PORT", "8000"),
+		},
+		JWT: struct {
+			Secret          string
+			AccessTokenTTL  time.Duration
+			RefreshTokenTTL time.Duration
+		}{
 			Secret:          getEnv("JWT_SECRET", "your-secret-key"),
-			AccessTokenTTL:  time.Duration(15) * time.Minute,
-			RefreshTokenTTL: time.Duration(720) * time.Hour,
+			AccessTokenTTL:  15 * time.Minute,
+			RefreshTokenTTL: 720 * time.Hour,
 		},
 	}
 
 	return config, nil
-}
-
-func getEnv(key, defaultValue string) string {
-	value := os.Getenv(key)
-	if value == "" {
-		return defaultValue
-	}
-	return value
 }

@@ -3,18 +3,18 @@ package config
 import (
 	"fmt"
 
-	"github.com/levstremilov/shance-app/internal/domain"
+	"github.com/levstremilov/shance-app/internal/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
 func InitDB(cfg *Config) (*gorm.DB, error) {
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
+	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		cfg.Database.Host,
+		cfg.Database.Port,
 		cfg.Database.User,
 		cfg.Database.Password,
 		cfg.Database.DBName,
-		cfg.Database.Port,
 	)
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
@@ -33,10 +33,10 @@ func CleanDB(db *gorm.DB) error {
 
 	// Удаляем таблицы в правильном порядке
 	tables := []interface{}{
-		&domain.ProjectTag{},
-		&domain.Project{},
-		&domain.User{},
-		&domain.Tag{},
+		&models.ProjectTag{},
+		&models.Project{},
+		&models.User{},
+		&models.Tag{},
 	}
 
 	for _, table := range tables {

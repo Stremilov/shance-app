@@ -27,7 +27,7 @@ type RegisterRequest struct {
 	LastName  string   `json:"last_name" binding:"required" example:"Doe"`
 	Phone     string   `json:"phone" example:"+79001234567"`
 	Role      string   `json:"role" example:"user"`
-	Tags      []string `json:"tags" example:"['tag1', 'tag2']"`
+	Tags      []string `json:"tags" example:"tag1,tag2"`
 	Country   string   `json:"country" example:"Russia"`
 	City      string   `json:"city" example:"Moscow"`
 	Email     string   `json:"email" binding:"required,email" example:"user@example.com"`

@@ -4,8 +4,10 @@ import (
 	"net/http"
 	"strconv"
 
+	_ "gorm.io/gorm"
+
 	"github.com/gin-gonic/gin"
-	"github.com/levstremilov/shance-app/internal/domain"
+	"github.com/levstremilov/shance-app/internal/models"
 	"github.com/levstremilov/shance-app/internal/service"
 )
 
@@ -25,19 +27,19 @@ type UpdateUserRequest struct {
 	Phone     string   `json:"subtitle" example:"Новый номер телефона"`
 	Role      string   `json:"description" example:"Новая роль"`
 	Tags      []string `json:"photo" example:"new_photo1.jpg, new_photo2.jpg"`
-	Country   string   `json:"tags" example:"new_tag1, new_tag2"`
+	Country   string   `json:"tags" example:"РА СИ Я"`
 	City      string   `json:"city" example:"Санкт-Петербург"`
 }
 
 // GetMe godoc
-// @Summary Получение данных текущего пользователя
-// @Description Возвращает данные авторизованного пользователя
+// @Summary Получение информации о текущем пользователе
+// @Description Возвращает информацию о текущем авторизованном пользователе
 // @Tags users
 // @Accept json
 // @Produce json
-// @Success 200 {object} domain.User
+// @Security ApiKeyAuth
+// @Success 200 {object} models.SwaggerUser
 // @Failure 401 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
 // @Router /users/me [get]
 func (h *UserHandler) GetMe(c *gin.Context) {
 	_, exists := c.Get("user_id")
@@ -53,18 +55,18 @@ func (h *UserHandler) GetMe(c *gin.Context) {
 	c.JSON(http.StatusOK, user)
 }
 
-// GetByID godoc
-// @Summary Получение пользователя по ID
-// @Description Возвращает данные пользователя по указанному ID
+// GetUser godoc
+// @Summary Получение информации о пользователе
+// @Description Возвращает информацию о пользователе по его ID
 // @Tags users
 // @Accept json
 // @Produce json
 // @Param id path int true "ID пользователя"
-// @Success 200 {object} domain.User
+// @Success 200 {object} models.SwaggerUser
 // @Failure 400 {object} ErrorResponse
-// @Failure 500 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
 // @Router /users/{id} [get]
-func (h *UserHandler) GetByID(c *gin.Context) {
+func (h *UserHandler) GetUser(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Invalid user ID"})
@@ -79,14 +81,16 @@ func (h *UserHandler) GetByID(c *gin.Context) {
 	c.JSON(http.StatusOK, user)
 }
 
+
 // UpdateMe godoc
 // @Summary Обновление данных текущего пользователя
 // @Description Обновляет данные авторизованного пользователя
 // @Tags users
 // @Accept json
 // @Produce json
+// @Security ApiKeyAuth
 // @Param request body UpdateUserRequest true "Данные пользователя"
-// @Success 200 {object} domain.User
+// @Success 200 {object} models.SwaggerUser
 // @Failure 400 {object} ErrorResponse
 // @Failure 401 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
@@ -104,14 +108,12 @@ func (h *UserHandler) UpdateMe(c *gin.Context) {
 		return
 	}
 
-	// Получаем текущие данные пользователя
 	currentUser, err := h.userService.GetByID(userID.(uint))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
 		return
 	}
 
-	// Обновляем поля, не переданные поля будут пустыми
 	currentUser.FirstName = req.FirstName
 	currentUser.LastName = req.LastName
 	currentUser.Phone = req.Phone
@@ -120,16 +122,16 @@ func (h *UserHandler) UpdateMe(c *gin.Context) {
 	currentUser.City = req.City
 
 	if len(req.Tags) > 0 {
-		tags := make([]domain.Tag, len(req.Tags))
+		tags := make([]models.Tag, len(req.Tags))
 		for i, tagName := range req.Tags {
-			tags[i] = domain.Tag{Name: tagName}
+			tags[i] = models.Tag{Name: tagName}
 		}
 		currentUser.Tags = tags
 	} else {
-		currentUser.Tags = []domain.Tag{}
+		currentUser.Tags = []models.Tag{}
 	}
 
-	if err := h.userService.UpdateByID(userID.(uint), currentUser); err != nil {
+	if err := h.userService.Update(currentUser); err != nil {
 		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
 		return
 	}
