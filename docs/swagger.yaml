@@ -1,64 +1,9 @@
 basePath: /api/v1
 definitions:
-  domain.Tag:
+  handler.CreateTagRequest:
     properties:
-      id:
-        type: integer
       name:
-        type: string
-    type: object
-  domain.User:
-    properties:
-      city:
-        type: string
-      country:
-        type: string
-      created_at:
-        type: string
-      email:
-        type: string
-      first_name:
-        type: string
-      id:
-        type: integer
-      last_name:
-        type: string
-      phone:
-        type: string
-      role:
-        type: string
-      tags:
-        items:
-          $ref: '#/definitions/domain.Tag'
-        type: array
-    type: object
-  handler.CreateProjectRequest:
-    properties:
-      description:
-        example: Описание проекта
-        type: string
-      name:
-        example: Новый проект
-        type: string
-      photo:
-        example:
-        - '[''photo1.jpg'''
-        - ' ''photo2.jpg'']'
-        items:
-          type: string
-        type: array
-      subtitle:
-        example: Подзаголовок проекта
-        type: string
-      tags:
-        example:
-        - '[''tag1'''
-        - ' ''tag2'']'
-        items:
-          type: string
-        type: array
-      title:
-        example: Заголовок проекта
+        example: Тег
         type: string
     required:
     - name
@@ -67,6 +12,18 @@ definitions:
     properties:
       error:
         type: string
+    type: object
+  handler.InviteMemberRequest:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      role:
+        example: member
+        type: string
+    required:
+    - email
+    - role
     type: object
   handler.LoginRequest:
     properties:
@@ -79,6 +36,24 @@ definitions:
     required:
     - email
     - password
+    type: object
+  handler.ProjectMemberResponse:
+    properties:
+      email:
+        example: user@example.com
+        type: string
+      first_name:
+        example: Иван
+        type: string
+      id:
+        example: 1
+        type: integer
+      last_name:
+        example: Иванов
+        type: string
+      role:
+        example: member
+        type: string
     type: object
   handler.ProjectResponse:
     properties:
@@ -106,8 +81,8 @@ definitions:
         type: string
       tags:
         example:
-        - '[''tag1'''
-        - ' ''tag2'']'
+        - tag1
+        - tag2
         items:
           type: string
         type: array
@@ -156,8 +131,8 @@ definitions:
         type: string
       tags:
         example:
-        - '[''tag1'''
-        - ' ''tag2'']'
+        - tag1
+        - tag2
         items:
           type: string
         type: array
@@ -166,6 +141,15 @@ definitions:
     - first_name
     - last_name
     - password
+    type: object
+  handler.TagResponse:
+    properties:
+      id:
+        example: 1
+        type: integer
+      name:
+        example: Тег
+        type: string
     type: object
   handler.TokenResponse:
     properties:
@@ -194,13 +178,19 @@ definitions:
         type: string
       tags:
         example:
-        - '[''new_tag1'''
-        - ' ''new_tag2'']'
+        - new_tag1
+        - new_tag2
         items:
           type: string
         type: array
       title:
         example: Новый заголовок
+        type: string
+    type: object
+  handler.UpdateTagRequest:
+    properties:
+      name:
+        example: Обновленный тег
         type: string
     type: object
   handler.UpdateUserRequest:
@@ -225,7 +215,7 @@ definitions:
         example: Новый номер телефона
         type: string
       tags:
-        example: new_tag1, new_tag2
+        example: РА СИ Я
         type: string
       title:
         example: Новая фамилия
@@ -244,6 +234,85 @@ definitions:
         type: integer
       last_name:
         example: Иванов
+        type: string
+    type: object
+  models.SwaggerListResponse:
+    properties:
+      count:
+        example: 100
+        type: integer
+      next:
+        example: /api/v1/users?page=2&page_size=10
+        type: string
+      previous:
+        example: /api/v1/users?page=1&page_size=10
+        type: string
+      results: {}
+    type: object
+  models.SwaggerProject:
+    properties:
+      created_at:
+        example: "2024-03-12T15:04:05Z"
+        type: string
+      description:
+        example: This is a project description
+        type: string
+      id:
+        example: 1
+        type: integer
+      name:
+        example: my-project
+        type: string
+      status:
+        example: active
+        type: string
+      subtitle:
+        example: A great project
+        type: string
+      title:
+        example: My Project
+        type: string
+      updated_at:
+        example: "2024-03-12T15:04:05Z"
+        type: string
+      user_email:
+        example: user@example.com
+        type: string
+      user_id:
+        example: 1
+        type: integer
+    type: object
+  models.SwaggerUser:
+    properties:
+      city:
+        example: New York
+        type: string
+      country:
+        example: USA
+        type: string
+      created_at:
+        example: "2024-03-12T15:04:05Z"
+        type: string
+      email:
+        example: user@example.com
+        type: string
+      first_name:
+        example: John
+        type: string
+      id:
+        example: 1
+        type: integer
+      last_name:
+        example: Doe
+        type: string
+      phone:
+        example: "+1234567890"
+        type: string
+      role:
+        example: user
+        type: string
+      updated_at:
+        example: "2024-03-12T15:04:05Z"
         type: string
     type: object
 host: localhost:8000
@@ -362,33 +431,70 @@ paths:
       consumes:
       - application/json
       description: Возвращает список всех проектов
+      parameters:
+      - description: Номер страницы
+        in: query
+        name: page
+        type: integer
+      - description: Размер страницы
+        in: query
+        name: page_size
+        type: integer
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/handler.ProjectResponse'
-            type: array
-        "500":
-          description: Internal Server Error
+            allOf:
+            - $ref: '#/definitions/models.SwaggerListResponse'
+            - properties:
+                results:
+                  items:
+                    $ref: '#/definitions/models.SwaggerProject'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
-      summary: Получение всех проектов
+      summary: Получение списка проектов
       tags:
       - projects
     post:
       consumes:
-      - application/json
-      description: Создает новый проект в системе
+      - multipart/form-data
+      description: Создает новый проект в системе с фотографиями
       parameters:
-      - description: Данные проекта
-        in: body
-        name: request
+      - description: Название проекта
+        in: formData
+        name: name
         required: true
-        schema:
-          $ref: '#/definitions/handler.CreateProjectRequest'
+        type: string
+      - description: Заголовок проекта
+        in: formData
+        name: title
+        type: string
+      - description: Подзаголовок проекта
+        in: formData
+        name: subtitle
+        type: string
+      - description: Описание проекта
+        in: formData
+        name: description
+        type: string
+      - collectionFormat: csv
+        description: Теги проекта
+        in: formData
+        items:
+          type: string
+        name: tags
+        type: array
+      - description: Фотографии проекта
+        in: formData
+        name: photos
+        required: true
+        type: file
       produces:
       - application/json
       responses:
@@ -437,7 +543,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: Возвращает проект по указанному ID
+      description: Возвращает информацию о проекте по его ID
       parameters:
       - description: ID проекта
         in: path
@@ -450,7 +556,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/handler.ProjectResponse'
+            $ref: '#/definitions/models.SwaggerProject'
         "400":
           description: Bad Request
           schema:
@@ -459,7 +565,7 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
-      summary: Получение проекта по ID
+      summary: Получение информации о проекте
       tags:
       - projects
     put:
@@ -496,6 +602,84 @@ paths:
       summary: Обновление проекта
       tags:
       - projects
+  /projects/{id}/invite:
+    post:
+      consumes:
+      - application/json
+      description: Приглашает пользователя в проект по email
+      parameters:
+      - description: ID проекта
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Данные приглашения
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.InviteMemberRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ProjectMemberResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Приглашение участника в проект
+      tags:
+      - projects
+  /projects/{id}/members:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает список всех участников проекта
+      parameters:
+      - description: ID проекта
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handler.ProjectMemberResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Получение списка участников проекта
+      tags:
+      - projects
   /projects/search:
     get:
       consumes:
@@ -528,11 +712,189 @@ paths:
       summary: Поиск проектов по названию
       tags:
       - projects
+  /tags:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает список всех тегов
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handler.TagResponse'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Получение списка тегов
+      tags:
+      - tags
+    post:
+      consumes:
+      - application/json
+      description: Создает новый тег в системе
+      parameters:
+      - description: Данные тега
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateTagRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handler.TagResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Создание нового тега
+      tags:
+      - tags
+  /tags/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Удаляет тег по его ID
+      parameters:
+      - description: ID тега
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Удаление тега
+      tags:
+      - tags
+    get:
+      consumes:
+      - application/json
+      description: Возвращает информацию о теге по его ID
+      parameters:
+      - description: ID тега
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.TagResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Получение тега
+      tags:
+      - tags
+    put:
+      consumes:
+      - application/json
+      description: Обновляет информацию о теге
+      parameters:
+      - description: ID тега
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Данные тега
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.UpdateTagRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.TagResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Обновление тега
+      tags:
+      - tags
+  /tags/search:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает список тегов, соответствующих поисковому запросу
+      parameters:
+      - description: Поисковый запрос
+        in: query
+        name: q
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handler.TagResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Поиск тегов
+      tags:
+      - tags
   /users/{id}:
     get:
       consumes:
       - application/json
-      description: Возвращает данные пользователя по указанному ID
+      description: Возвращает информацию о пользователе по его ID
       parameters:
       - description: ID пользователя
         in: path
@@ -545,39 +907,37 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/domain.User'
+            $ref: '#/definitions/models.SwaggerUser'
         "400":
           description: Bad Request
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
-        "500":
-          description: Internal Server Error
+        "404":
+          description: Not Found
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
-      summary: Получение пользователя по ID
+      summary: Получение информации о пользователе
       tags:
       - users
   /users/me:
     get:
       consumes:
       - application/json
-      description: Возвращает данные авторизованного пользователя
+      description: Возвращает информацию о текущем авторизованном пользователе
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/domain.User'
+            $ref: '#/definitions/models.SwaggerUser'
         "401":
           description: Unauthorized
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
-      summary: Получение данных текущего пользователя
+      security:
+      - ApiKeyAuth: []
+      summary: Получение информации о текущем пользователе
       tags:
       - users
     put:
@@ -597,7 +957,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/domain.User'
+            $ref: '#/definitions/models.SwaggerUser'
         "400":
           description: Bad Request
           schema:
@@ -610,6 +970,8 @@ paths:
           description: Internal Server Error
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
       summary: Обновление данных текущего пользователя
       tags:
       - users
