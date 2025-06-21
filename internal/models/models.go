@@ -13,9 +13,9 @@ type TokenPair struct {
 
 type Tag struct {
 	gorm.Model
-	Name        string `gorm:"uniqueIndex;not null"`
-	Users       []User    `gorm:"many2many:user_tags;"`
-	Projects    []Project `gorm:"many2many:project_tags;"`
+	Name     string    `gorm:"uniqueIndex;not null"`
+	Users    []User    `gorm:"many2many:user_tags;"`
+	Projects []Project `gorm:"many2many:project_tags;"`
 }
 
 type Project struct {
@@ -54,4 +54,26 @@ type ProjectTag struct {
 	ProjectID uint
 	TagID     uint
 	gorm.Model
+}
+
+type Technology struct {
+	ID   uint   `gorm:"primaryKey" json:"id"`
+	Name string `gorm:"unique;not null" json:"name"`
+}
+
+type VacancyTechnology struct {
+	ProjectVacancyID uint
+	TechnologyID     uint
+	Technology       Technology `gorm:"foreignKey:TechnologyID"`
+	gorm.Model
+}
+
+type ProjectVacancy struct {
+	ID           uint         `gorm:"primaryKey" json:"id"`
+	ProjectID    uint         `json:"project_id"`
+	Project      Project      `gorm:"foreignKey:ProjectID"`
+	Title        string       `json:"title"`
+	Description  string       `json:"description"`
+	Technologies []Technology `gorm:"many2many:vacancy_technologies;" json:"technologies"`
+	CreatedAt    time.Time    `json:"created_at"`
 }

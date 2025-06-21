@@ -2,12 +2,9 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 	"time"
-
-	"mime/multipart"
 
 	"github.com/gin-gonic/gin"
 	"github.com/levstremilov/shance-app/internal/models"
@@ -22,12 +19,12 @@ type ProjectHandler struct {
 
 // CreateProjectRequest представляет запрос на создание проекта
 type CreateProjectRequest struct {
-	Name        string                  `form:"name" binding:"required" example:"Новый проект"`
-	Title       string                  `form:"title" example:"Заголовок проекта"`
-	Subtitle    string                  `form:"subtitle" example:"Подзаголовок проекта"`
-	Description string                  `form:"description" example:"Описание проекта"`
-	Tags        []string                `form:"tags" example:"tag1,tag2"`
-	Photos      []*multipart.FileHeader `form:"photos" binding:"required"`
+	Name        string   `json:"name" binding:"required"`
+	Title       string   `json:"title"`
+	Subtitle    string   `json:"subtitle"`
+	Description string   `json:"description"`
+	Photo       string   `json:"photo"`
+	Tags        []string `json:"tags"`
 }
 
 // UpdateProjectRequest представляет запрос на обновление проекта
@@ -89,7 +86,7 @@ func NewProjectHandler(projectService service.ProjectServiceInterface) *ProjectH
 // @Tags projects
 // @Accept json
 // @Produce json
-// @Success 200 {array} ProjectResponse
+// @Success 200 {array} models.SwaggerProject
 // @Failure 500 {object} ErrorResponse
 // @Router /projects [get]
 func (h *ProjectHandler) GetProjects(c *gin.Context) {
@@ -113,6 +110,8 @@ func (h *ProjectHandler) GetProjects(c *gin.Context) {
 			return
 		}
 
+		// TODO делаешь метод project.toResponse(user)
+		// в нем пшишешь все что ниже - в методе GetOwnProjects переиспользуешь
 		response[i] = ProjectResponse{
 			ID:          p.ID,
 			Name:        p.Name,
@@ -147,99 +146,38 @@ func (h *ProjectHandler) GetProjects(c *gin.Context) {
 // @Failure 404 {object} ErrorResponse
 // @Router /projects/{id} [get]
 func (h *ProjectHandler) GetProject(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	id := c.Param("id")
+	project, err := h.projectService.GetByID(id)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Invalid project ID"})
+		c.JSON(http.StatusNotFound, ErrorResponse{Error: "project not found"})
 		return
 	}
-
-	project, err := h.projectService.GetByID(uint(id))
-	if err != nil {
-		c.JSON(http.StatusNotFound, ErrorResponse{Error: "Project not found"})
-		return
-	}
-
-	tags := make([]string, len(project.Tags))
-	for i, t := range project.Tags {
-		tags[i] = t.Name
-	}
-
-	// Преобразуем строку обратно в массив для ответа
-	var photoArray []string
-	if err := json.Unmarshal([]byte(project.Photo), &photoArray); err != nil {
-		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "error processing photo data"})
-		return
-	}
-
-	response := ProjectResponse{
-		ID:          project.ID,
-		Name:        project.Name,
-		Title:       project.Title,
-		Subtitle:    project.Subtitle,
-		Description: project.Description,
-		Photo:       photoArray,
-		Tags:        tags,
-		UserID:      project.UserID,
-		User: UserResponse{
-			ID:        project.User.ID,
-			FirstName: project.User.FirstName,
-			LastName:  project.User.LastName,
-			Email:     project.User.Email,
-		},
-		CreatedAt: project.CreatedAt,
-	}
-
-	c.JSON(http.StatusOK, response)
+	c.JSON(http.StatusOK, project)
 }
 
 // CreateProject godoc
 // @Summary Создание нового проекта
-// @Description Создает новый проект в системе с фотографиями
+// @Description Создает новый проект для текущего пользователя
 // @Tags projects
-// @Accept multipart/form-data
+// @Accept json
 // @Produce json
-// @Param name formData string true "Название проекта"
-// @Param title formData string false "Заголовок проекта"
-// @Param subtitle formData string false "Подзаголовок проекта"
-// @Param description formData string false "Описание проекта"
-// @Param tags formData []string false "Теги проекта"
-// @Param photos formData file true "Фотографии проекта"
-// @Success 201 {object} ProjectResponse
+// @Security ApiKeyAuth
+// @Param request body CreateProjectRequest true "Данные проекта"
+// @Success 201 {object} models.SwaggerProject
 // @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
 // @Router /projects [post]
 func (h *ProjectHandler) CreateProject(c *gin.Context) {
-	var req CreateProjectRequest
-	if err := c.ShouldBind(&req); err != nil {
-		c.JSON(http.StatusBadRequest, ErrorResponse{Error: err.Error()})
-		return
-	}
-
 	userID, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "user not authenticated"})
 		return
 	}
 
-	// Обработка загруженных фотографий
-	photoPaths := make([]string, 0, len(req.Photos))
-	for _, photo := range req.Photos {
-		// Создаем уникальное имя файла
-		filename := fmt.Sprintf("%d_%s", time.Now().UnixNano(), photo.Filename)
-		filepath := fmt.Sprintf("uploads/projects/%s", filename)
-
-		// Сохраняем файл
-		if err := c.SaveUploadedFile(photo, filepath); err != nil {
-			c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "failed to save photo"})
-			return
-		}
-
-		photoPaths = append(photoPaths, filepath)
-	}
-
-	photoJSON, err := json.Marshal(photoPaths)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid photo format"})
+	var req CreateProjectRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: err.Error()})
 		return
 	}
 
@@ -248,8 +186,16 @@ func (h *ProjectHandler) CreateProject(c *gin.Context) {
 		Title:       req.Title,
 		Subtitle:    req.Subtitle,
 		Description: req.Description,
-		Photo:       string(photoJSON),
+		Photo:       req.Photo,
 		UserID:      userID.(uint),
+	}
+
+	if len(req.Tags) > 0 {
+		tags := make([]models.Tag, len(req.Tags))
+		for i, tagName := range req.Tags {
+			tags[i] = models.Tag{Name: tagName}
+		}
+		project.Tags = tags
 	}
 
 	if err := h.projectService.Create(project); err != nil {
@@ -257,30 +203,7 @@ func (h *ProjectHandler) CreateProject(c *gin.Context) {
 		return
 	}
 
-	tags := make([]string, len(project.Tags))
-	for i, t := range project.Tags {
-		tags[i] = t.Name
-	}
-
-	response := ProjectResponse{
-		ID:          project.ID,
-		Name:        project.Name,
-		Title:       project.Title,
-		Subtitle:    project.Subtitle,
-		Description: project.Description,
-		Photo:       photoPaths,
-		Tags:        tags,
-		UserID:      project.UserID,
-		User: UserResponse{
-			ID:        project.User.ID,
-			FirstName: project.User.FirstName,
-			LastName:  project.User.LastName,
-			Email:     project.User.Email,
-		},
-		CreatedAt: project.CreatedAt,
-	}
-
-	c.JSON(http.StatusCreated, response)
+	c.JSON(http.StatusCreated, project)
 }
 
 // UpdateProject godoc
@@ -374,7 +297,7 @@ func (h *ProjectHandler) DeleteProject(c *gin.Context) {
 		return
 	}
 
-	if err := h.projectService.Delete(uint(id)); err != nil {
+	if err := h.projectService.Delete(string(id)); err != nil {
 		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
 		return
 	}
@@ -448,13 +371,16 @@ func (h *ProjectHandler) SearchProjects(c *gin.Context) {
 // @Tags projects
 // @Accept json
 // @Produce json
-// @Param page query int false "Номер страницы"
-// @Param page_size query int false "Размер страницы"
-// @Success 200 {object} models.SwaggerListResponse{results=[]models.SwaggerProject}
-// @Failure 400 {object} ErrorResponse
+// @Success 200 {array} models.SwaggerProject
+// @Failure 500 {object} ErrorResponse
 // @Router /projects [get]
 func (h *ProjectHandler) ListProjects(c *gin.Context) {
-	// ... existing code ...
+	projects, err := h.projectService.GetAll()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, projects)
 }
 
 // InviteMember godoc

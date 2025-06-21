@@ -1,9 +1,51 @@
 basePath: /api/v1
 definitions:
+  handler.CreateProjectRequest:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+      photo:
+        type: string
+      subtitle:
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
+      title:
+        type: string
+    required:
+    - name
+    type: object
+  handler.CreateProjectVacancyRequest:
+    properties:
+      description:
+        type: string
+      technologies:
+        description: id технологий
+        items:
+          type: integer
+        type: array
+      title:
+        type: string
+    required:
+    - description
+    - technologies
+    - title
+    type: object
   handler.CreateTagRequest:
     properties:
       name:
         example: Тег
+        type: string
+    required:
+    - name
+    type: object
+  handler.CreateTechnologyRequest:
+    properties:
+      name:
         type: string
     required:
     - name
@@ -236,51 +278,45 @@ definitions:
         example: Иванов
         type: string
     type: object
-  models.SwaggerListResponse:
-    properties:
-      count:
-        example: 100
-        type: integer
-      next:
-        example: /api/v1/users?page=2&page_size=10
-        type: string
-      previous:
-        example: /api/v1/users?page=1&page_size=10
-        type: string
-      results: {}
-    type: object
   models.SwaggerProject:
     properties:
-      created_at:
-        example: "2024-03-12T15:04:05Z"
-        type: string
       description:
-        example: This is a project description
+        type: string
+      end_date:
         type: string
       id:
-        example: 1
         type: integer
       name:
-        example: my-project
+        type: string
+      photo:
+        type: string
+      start_date:
         type: string
       status:
-        example: active
         type: string
       subtitle:
-        example: A great project
         type: string
       title:
-        example: My Project
-        type: string
-      updated_at:
-        example: "2024-03-12T15:04:05Z"
-        type: string
-      user_email:
-        example: user@example.com
         type: string
       user_id:
-        example: 1
         type: integer
+    type: object
+  models.SwaggerProjectVacancy:
+    properties:
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      project_id:
+        type: integer
+      technology_names:
+        items:
+          type: string
+        type: array
+      title:
+        type: string
     type: object
   models.SwaggerUser:
     properties:
@@ -313,6 +349,13 @@ definitions:
         type: string
       updated_at:
         example: "2024-03-12T15:04:05Z"
+        type: string
+    type: object
+  models.Technology:
+    properties:
+      id:
+        type: integer
+      name:
         type: string
     type: object
 host: localhost:8000
@@ -431,31 +474,17 @@ paths:
       consumes:
       - application/json
       description: Возвращает список всех проектов
-      parameters:
-      - description: Номер страницы
-        in: query
-        name: page
-        type: integer
-      - description: Размер страницы
-        in: query
-        name: page_size
-        type: integer
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            allOf:
-            - $ref: '#/definitions/models.SwaggerListResponse'
-            - properties:
-                results:
-                  items:
-                    $ref: '#/definitions/models.SwaggerProject'
-                  type: array
-              type: object
-        "400":
-          description: Bad Request
+            items:
+              $ref: '#/definitions/models.SwaggerProject'
+            type: array
+        "500":
+          description: Internal Server Error
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
       summary: Получение списка проектов
@@ -463,53 +492,36 @@ paths:
       - projects
     post:
       consumes:
-      - multipart/form-data
-      description: Создает новый проект в системе с фотографиями
+      - application/json
+      description: Создает новый проект для текущего пользователя
       parameters:
-      - description: Название проекта
-        in: formData
-        name: name
+      - description: Данные проекта
+        in: body
+        name: request
         required: true
-        type: string
-      - description: Заголовок проекта
-        in: formData
-        name: title
-        type: string
-      - description: Подзаголовок проекта
-        in: formData
-        name: subtitle
-        type: string
-      - description: Описание проекта
-        in: formData
-        name: description
-        type: string
-      - collectionFormat: csv
-        description: Теги проекта
-        in: formData
-        items:
-          type: string
-        name: tags
-        type: array
-      - description: Фотографии проекта
-        in: formData
-        name: photos
-        required: true
-        type: file
+        schema:
+          $ref: '#/definitions/handler.CreateProjectRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/handler.ProjectResponse'
+            $ref: '#/definitions/models.SwaggerProject'
         "400":
           description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
             $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
       summary: Создание нового проекта
       tags:
       - projects
@@ -680,6 +692,72 @@ paths:
       summary: Получение списка участников проекта
       tags:
       - projects
+  /projects/{id}/vacancies:
+    get:
+      consumes:
+      - application/json
+      description: Получает список вакансий, привязанных к проекту
+      parameters:
+      - description: ID проекта
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.SwaggerProjectVacancy'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Получить вакансии проекта
+      tags:
+      - vacancies
+  /projects/{id}/vacancy:
+    post:
+      consumes:
+      - application/json
+      description: Создаёт новую вакансию, привязанную к проекту
+      parameters:
+      - description: ID проекта
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Данные вакансии
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateProjectVacancyRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.SwaggerProjectVacancy'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Создать вакансию для проекта
+      tags:
+      - vacancies
   /projects/search:
     get:
       consumes:
@@ -793,34 +871,6 @@ paths:
       summary: Удаление тега
       tags:
       - tags
-    get:
-      consumes:
-      - application/json
-      description: Возвращает информацию о теге по его ID
-      parameters:
-      - description: ID тега
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handler.TagResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/handler.ErrorResponse'
-      summary: Получение тега
-      tags:
-      - tags
     put:
       consumes:
       - application/json
@@ -890,6 +940,36 @@ paths:
       summary: Поиск тегов
       tags:
       - tags
+  /technologies:
+    post:
+      consumes:
+      - application/json
+      description: Создаёт новую технологию
+      parameters:
+      - description: Данные технологии
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateTechnologyRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.Technology'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Создать технологию
+      tags:
+      - technologies
   /users/{id}:
     get:
       consumes:
@@ -919,6 +999,33 @@ paths:
       summary: Получение информации о пользователе
       tags:
       - users
+  /users/{user_id}/projects:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает список проектов текущего пользователя
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handler.ProjectResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Получение проектов пользователя
+      tags:
+      - users
   /users/me:
     get:
       consumes:
@@ -940,7 +1047,7 @@ paths:
       summary: Получение информации о текущем пользователе
       tags:
       - users
-    put:
+    patch:
       consumes:
       - application/json
       description: Обновляет данные авторизованного пользователя
