@@ -49,3 +49,14 @@ func (r *UserRepository) List() ([]models.User, error) {
 	}
 	return users, nil
 }
+
+
+func (r *UserRepository) OwnProjects(user_id uint) ([]models.Project, error) {
+	var projects []models.Project
+
+	if err := r.db.Find(&projects).Where("UserID = ?", user_id).Error; err != nil {
+		return nil, err
+	}
+
+	return projects, nil
+}

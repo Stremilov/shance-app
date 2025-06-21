@@ -16,6 +16,7 @@ type UserServiceInterface interface {
 	GetByEmail(email string) (*models.User, error)
 	Delete(id uint) error
 	List() ([]models.User, error)
+	GetOwnProjects(id uint) ([]models.Project, error)
 }
 
 type UserService struct {
@@ -58,4 +59,8 @@ func (s *UserService) Delete(id uint) error {
 
 func (s *UserService) List() ([]models.User, error) {
 	return s.userRepo.List()
+}
+
+func (s *UserService) GetOwnProjects(id uint) ([]models.Project, error) {
+	return s.userRepo.OwnProjects(id)
 }

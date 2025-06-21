@@ -22,13 +22,13 @@ func NewUserHandler(userService service.UserServiceInterface) *UserHandler {
 }
 
 type UpdateUserRequest struct {
-	FirstName string   `json:"name" example:"Новое имя"`
-	LastName  string   `json:"title" example:"Новая фамилия"`
-	Phone     string   `json:"subtitle" example:"Новый номер телефона"`
-	Role      string   `json:"description" example:"Новая роль"`
-	Tags      []string `json:"photo" example:"new_photo1.jpg, new_photo2.jpg"`
-	Country   string   `json:"tags" example:"РА СИ Я"`
-	City      string   `json:"city" example:"Санкт-Петербург"`
+	FirstName *string   `json:"name" example:"Новое имя"`
+	LastName  *string   `json:"title" example:"Новая фамилия"`
+	Phone     *string   `json:"subtitle" example:"Новый номер телефона"`
+	Role      *string   `json:"description" example:"Новая роль"`
+	Tags      *[]string `json:"photo" example:"new_photo1.jpg, new_photo2.jpg"`
+	Country   *string   `json:"tags" example:"РА СИ Я"`
+	City      *string   `json:"city" example:"Санкт-Петербург"`
 }
 
 // GetMe godoc
@@ -81,7 +81,6 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 	c.JSON(http.StatusOK, user)
 }
 
-
 // UpdateMe godoc
 // @Summary Обновление данных текущего пользователя
 // @Description Обновляет данные авторизованного пользователя
@@ -94,7 +93,7 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 // @Failure 400 {object} ErrorResponse
 // @Failure 401 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
-// @Router /users/me [put]
+// @Router /users/me [patch]
 func (h *UserHandler) UpdateMe(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
@@ -114,21 +113,30 @@ func (h *UserHandler) UpdateMe(c *gin.Context) {
 		return
 	}
 
-	currentUser.FirstName = req.FirstName
-	currentUser.LastName = req.LastName
-	currentUser.Phone = req.Phone
-	currentUser.Role = req.Role
-	currentUser.Country = req.Country
-	currentUser.City = req.City
-
-	if len(req.Tags) > 0 {
-		tags := make([]models.Tag, len(req.Tags))
-		for i, tagName := range req.Tags {
+	if req.FirstName != nil {
+		currentUser.FirstName = *req.FirstName
+	}
+	if req.LastName != nil {
+		currentUser.LastName = *req.LastName
+	}
+	if req.Phone != nil {
+		currentUser.Phone = *req.Phone
+	}
+	if req.Role != nil {
+		currentUser.Role = *req.Role
+	}
+	if req.Country != nil {
+		currentUser.Country = *req.Country
+	}
+	if req.City != nil {
+		currentUser.City = *req.City
+	}
+	if req.Tags != nil {
+		tags := make([]models.Tag, len(*req.Tags))
+		for i, tagName := range *req.Tags {
 			tags[i] = models.Tag{Name: tagName}
 		}
 		currentUser.Tags = tags
-	} else {
-		currentUser.Tags = []models.Tag{}
 	}
 
 	if err := h.userService.Update(currentUser); err != nil {
@@ -137,4 +145,56 @@ func (h *UserHandler) UpdateMe(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, currentUser)
+}
+
+// GetOwnProjects godoc
+// @Summary Получение проектов пользователя
+// @Description Возвращает список проектов текущего пользователя
+// @Tags users
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Success 200 {array} ProjectResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /users/{user_id}/projects [get]
+func (h *UserHandler) GetOwnProjects(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "user not authenticated"})
+		return
+	}
+
+	userIDUint, ok := userID.(uint)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "invalid user id type"})
+		return
+	}
+
+	projects, err := h.userService.GetOwnProjects(userIDUint)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+		return
+	}
+
+	response := make([]ProjectResponse, len(projects))
+	for i, p := range projects {
+		tags := make([]string, len(p.Tags))
+		for j, t := range p.Tags {
+			tags[j] = t.Name
+		}
+
+		response[i] = ProjectResponse{
+			ID:          p.ID,
+			Name:        p.Name,
+			Title:       p.Title,
+			Subtitle:    p.Subtitle,
+			Description: p.Description,
+			Photo:       []string{p.Photo},
+			Tags:        tags,
+			UserID:      p.UserID,
+		}
+	}
+
+	c.JSON(http.StatusOK, response)
 }

@@ -187,44 +187,18 @@ const docTemplate = `{
                     "projects"
                 ],
                 "summary": "Получение списка проектов",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Номер страницы",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Размер страницы",
-                        "name": "page_size",
-                        "in": "query"
-                    }
-                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/models.SwaggerListResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "results": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/models.SwaggerProject"
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.SwaggerProject"
+                            }
                         }
                     },
-                    "400": {
-                        "description": "Bad Request",
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -232,9 +206,14 @@ const docTemplate = `{
                 }
             },
             "post": {
-                "description": "Создает новый проект в системе с фотографиями",
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Создает новый проект для текущего пользователя",
                 "consumes": [
-                    "multipart/form-data"
+                    "application/json"
                 ],
                 "produces": [
                     "application/json"
@@ -245,57 +224,30 @@ const docTemplate = `{
                 "summary": "Создание нового проекта",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "Название проекта",
-                        "name": "name",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Заголовок проекта",
-                        "name": "title",
-                        "in": "formData"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Подзаголовок проекта",
-                        "name": "subtitle",
-                        "in": "formData"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Описание проекта",
-                        "name": "description",
-                        "in": "formData"
-                    },
-                    {
-                        "type": "array",
-                        "items": {
-                            "type": "string"
-                        },
-                        "collectionFormat": "csv",
-                        "description": "Теги проекта",
-                        "name": "tags",
-                        "in": "formData"
-                    },
-                    {
-                        "type": "file",
-                        "description": "Фотографии проекта",
-                        "name": "photos",
-                        "in": "formData",
-                        "required": true
+                        "description": "Данные проекта",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.CreateProjectRequest"
+                        }
                     }
                 ],
                 "responses": {
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/handler.ProjectResponse"
+                            "$ref": "#/definitions/models.SwaggerProject"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -608,6 +560,106 @@ const docTemplate = `{
                 }
             }
         },
+        "/projects/{id}/vacancies": {
+            "get": {
+                "description": "Получает список вакансий, привязанных к проекту",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "vacancies"
+                ],
+                "summary": "Получить вакансии проекта",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID проекта",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.SwaggerProjectVacancy"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/projects/{id}/vacancy": {
+            "post": {
+                "description": "Создаёт новую вакансию, привязанную к проекту",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "vacancies"
+                ],
+                "summary": "Создать вакансию для проекта",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID проекта",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Данные вакансии",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.CreateProjectVacancyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.SwaggerProjectVacancy"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/tags": {
             "get": {
                 "description": "Возвращает список всех тегов",
@@ -732,48 +784,6 @@ const docTemplate = `{
             }
         },
         "/tags/{id}": {
-            "get": {
-                "description": "Возвращает информацию о теге по его ID",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "tags"
-                ],
-                "summary": "Получение тега",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "ID тега",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/handler.TagResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    }
-                }
-            },
             "put": {
                 "description": "Обновляет информацию о теге",
                 "consumes": [
@@ -877,6 +887,52 @@ const docTemplate = `{
                 }
             }
         },
+        "/technologies": {
+            "post": {
+                "description": "Создаёт новую технологию",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "technologies"
+                ],
+                "summary": "Создать технологию",
+                "parameters": [
+                    {
+                        "description": "Данные технологии",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.CreateTechnologyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/models.Technology"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/users/me": {
             "get": {
                 "security": [
@@ -910,7 +966,7 @@ const docTemplate = `{
                     }
                 }
             },
-            "put": {
+            "patch": {
                 "security": [
                     {
                         "ApiKeyAuth": []
@@ -1009,9 +1065,104 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/users/{user_id}/projects": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Возвращает список проектов текущего пользователя",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Получение проектов пользователя",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handler.ProjectResponse"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
+        "handler.CreateProjectRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "photo": {
+                    "type": "string"
+                },
+                "subtitle": {
+                    "type": "string"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.CreateProjectVacancyRequest": {
+            "type": "object",
+            "required": [
+                "description",
+                "technologies",
+                "title"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "technologies": {
+                    "description": "id технологий",
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
         "handler.CreateTagRequest": {
             "type": "object",
             "required": [
@@ -1021,6 +1172,17 @@ const docTemplate = `{
                 "name": {
                     "type": "string",
                     "example": "Тег"
+                }
+            }
+        },
+        "handler.CreateTechnologyRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string"
                 }
             }
         },
@@ -1346,66 +1508,64 @@ const docTemplate = `{
                 }
             }
         },
-        "models.SwaggerListResponse": {
-            "type": "object",
-            "properties": {
-                "count": {
-                    "type": "integer",
-                    "example": 100
-                },
-                "next": {
-                    "type": "string",
-                    "example": "/api/v1/users?page=2\u0026page_size=10"
-                },
-                "previous": {
-                    "type": "string",
-                    "example": "/api/v1/users?page=1\u0026page_size=10"
-                },
-                "results": {}
-            }
-        },
         "models.SwaggerProject": {
             "type": "object",
             "properties": {
-                "created_at": {
-                    "type": "string",
-                    "example": "2024-03-12T15:04:05Z"
-                },
                 "description": {
-                    "type": "string",
-                    "example": "This is a project description"
+                    "type": "string"
+                },
+                "end_date": {
+                    "type": "string"
                 },
                 "id": {
-                    "type": "integer",
-                    "example": 1
+                    "type": "integer"
                 },
                 "name": {
-                    "type": "string",
-                    "example": "my-project"
+                    "type": "string"
+                },
+                "photo": {
+                    "type": "string"
+                },
+                "start_date": {
+                    "type": "string"
                 },
                 "status": {
-                    "type": "string",
-                    "example": "active"
+                    "type": "string"
                 },
                 "subtitle": {
-                    "type": "string",
-                    "example": "A great project"
+                    "type": "string"
                 },
                 "title": {
-                    "type": "string",
-                    "example": "My Project"
-                },
-                "updated_at": {
-                    "type": "string",
-                    "example": "2024-03-12T15:04:05Z"
-                },
-                "user_email": {
-                    "type": "string",
-                    "example": "user@example.com"
+                    "type": "string"
                 },
                 "user_id": {
-                    "type": "integer",
-                    "example": 1
+                    "type": "integer"
+                }
+            }
+        },
+        "models.SwaggerProjectVacancy": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "project_id": {
+                    "type": "integer"
+                },
+                "technology_names": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "title": {
+                    "type": "string"
                 }
             }
         },
@@ -1451,6 +1611,17 @@ const docTemplate = `{
                 "updated_at": {
                     "type": "string",
                     "example": "2024-03-12T15:04:05Z"
+                }
+            }
+        },
+        "models.Technology": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
                 }
             }
         }

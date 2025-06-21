@@ -1,5 +1,7 @@
 package models
 
+import "time"
+
 // SwaggerUser представляет пользователя для Swagger документации
 type SwaggerUser struct {
 	ID        uint   `json:"id" example:"1"`
@@ -16,16 +18,16 @@ type SwaggerUser struct {
 
 // SwaggerProject представляет проект для Swagger документации
 type SwaggerProject struct {
-	ID          uint   `json:"id" example:"1"`
-	Name        string `json:"name" example:"my-project"`
-	Title       string `json:"title" example:"My Project"`
-	Subtitle    string `json:"subtitle" example:"A great project"`
-	Description string `json:"description" example:"This is a project description"`
-	Status      string `json:"status" example:"active"`
-	UserID      uint   `json:"user_id" example:"1"`
-	UserEmail   string `json:"user_email" example:"user@example.com"`
-	CreatedAt   string `json:"created_at" example:"2024-03-12T15:04:05Z"`
-	UpdatedAt   string `json:"updated_at" example:"2024-03-12T15:04:05Z"`
+	ID          uint      `json:"id"`
+	Name        string    `json:"name"`
+	Title       string    `json:"title"`
+	Subtitle    string    `json:"subtitle"`
+	Description string    `json:"description"`
+	Photo       string    `json:"photo"`
+	Status      string    `json:"status"`
+	StartDate   time.Time `json:"start_date"`
+	EndDate     time.Time `json:"end_date"`
+	UserID      uint      `json:"user_id"`
 }
 
 // SwaggerTag представляет тег для Swagger документации
@@ -42,4 +44,18 @@ type SwaggerListResponse struct {
 	Next     string      `json:"next" example:"/api/v1/users?page=2&page_size=10"`
 	Previous string      `json:"previous" example:"/api/v1/users?page=1&page_size=10"`
 	Results  interface{} `json:"results"`
+}
+
+type SwaggerTechnology struct {
+	ID   uint   `json:"id"`
+	Name string `json:"name"`
+}
+
+type SwaggerProjectVacancy struct {
+	ID              uint      `json:"id"`
+	ProjectID       uint      `json:"project_id"`
+	Title           string    `json:"title"`
+	Description     string    `json:"description"`
+	TechnologyNames []string  `json:"technology_names"`
+	CreatedAt       time.Time `json:"created_at"`
 }

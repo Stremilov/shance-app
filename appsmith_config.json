@@ -1,0 +1,39 @@
+{
+  "name": "Shance App API",
+  "type": "REST",
+  "baseUrl": "http://localhost:8080",
+  "headers": {
+    "Content-Type": "application/json"
+  },
+  "queries": {
+    "getUsers": {
+      "method": "GET",
+      "url": "/users",
+      "headers": {
+        "Authorization": "Bearer {{token}}"
+      }
+    },
+    "getUserProjects": {
+      "method": "GET",
+      "url": "/users/{{userId}}/projects",
+      "headers": {
+        "Authorization": "Bearer {{token}}"
+      }
+    },
+    "createProject": {
+      "method": "POST",
+      "url": "/projects",
+      "headers": {
+        "Authorization": "Bearer {{token}}"
+      },
+      "body": {
+        "name": "{{name}}",
+        "title": "{{title}}",
+        "subtitle": "{{subtitle}}",
+        "description": "{{description}}",
+        "photo": "{{photo}}",
+        "tags": "{{tags}}"
+      }
+    }
+  }
+} 

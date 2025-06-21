@@ -68,37 +68,6 @@ func (h *TagHandler) CreateTag(c *gin.Context) {
 	c.JSON(http.StatusCreated, response)
 }
 
-// GetTag godoc
-// @Summary Получение тега
-// @Description Возвращает информацию о теге по его ID
-// @Tags tags
-// @Accept json
-// @Produce json
-// @Param id path int true "ID тега"
-// @Success 200 {object} TagResponse
-// @Failure 400 {object} ErrorResponse
-// @Failure 404 {object} ErrorResponse
-// @Router /tags/{id} [get]
-func (h *TagHandler) GetTag(c *gin.Context) {
-	id, err := strconv.ParseUint(c.Param("id"), 10, 32)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "Invalid tag ID"})
-		return
-	}
-
-	tag, err := h.tagService.GetByID(uint(id))
-	if err != nil {
-		c.JSON(http.StatusNotFound, ErrorResponse{Error: "Tag not found"})
-		return
-	}
-
-	response := TagResponse{
-		ID:   tag.ID,
-		Name: tag.Name,
-	}
-
-	c.JSON(http.StatusOK, response)
-}
 
 // UpdateTag godoc
 // @Summary Обновление тега
