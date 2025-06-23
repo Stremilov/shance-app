@@ -36,6 +36,11 @@ definitions:
     required:
     - name
     type: object
+  handler.CreateVacancyResponseRequest:
+    properties:
+      message:
+        type: string
+    type: object
   handler.ErrorResponse:
     properties:
       error:
@@ -336,6 +341,17 @@ definitions:
       updated_at:
         example: "2024-03-12T15:04:05Z"
         type: string
+    type: object
+  models.SwaggerVacancyResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      message:
+        type: string
+      user:
+        $ref: '#/definitions/models.SwaggerUser'
     type: object
   models.Technology:
     properties:
@@ -1089,6 +1105,76 @@ paths:
       summary: Обновление данных текущего пользователя
       tags:
       - users
+  /vacancies/{id}:
+    post:
+      consumes:
+      - application/json
+      description: Создать отклик на вакансию
+      parameters:
+      - description: ID вакансии
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Данные отклика
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateVacancyResponseRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/models.SwaggerVacancyResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Отклик на вакансию
+      tags:
+      - vacancy-responses
+  /vacancies/{id}/responses:
+    get:
+      consumes:
+      - application/json
+      description: Получить список откликов на вакансию с контактами пользователей
+      parameters:
+      - description: ID вакансии
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.SwaggerVacancyResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Получить отклики на вакансию
+      tags:
+      - vacancy-responses
 schemes:
 - http
 swagger: "2.0"

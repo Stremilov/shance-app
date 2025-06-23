@@ -89,3 +89,19 @@ type ProjectVacancy struct {
 	Questions    []Question   `gorm:"many2many:vacancy_questions;" json:"questions"`
 	CreatedAt    time.Time    `json:"created_at"`
 }
+
+type VacancyResponse struct {
+	ID               uint      `gorm:"primaryKey" json:"id"`
+	ProjectVacancyID uint      `json:"project_vacancy_id"`
+	UserID           uint      `json:"user_id"`
+	User             User      `gorm:"foreignKey:UserID"`
+	Message          string    `json:"message"`
+	CreatedAt        time.Time `json:"created_at"`
+}
+
+type SwaggerVacancyResponse struct {
+	ID        uint        `json:"id"`
+	Message   string      `json:"message"`
+	User      SwaggerUser `json:"user"`
+	CreatedAt string      `json:"created_at"`
+}

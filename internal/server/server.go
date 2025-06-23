@@ -60,9 +60,9 @@ func SetUpRouter(
 		protected := api.Group("")
 
 		// Protected routes
-		if cfg.Server.Env == "dev" {
-			protected.Use(middleware.AuthMiddleware(authService))
-		}
+		// if cfg.Server.Env == "dev" {
+		protected.Use(middleware.AuthMiddleware(authService))
+		// }
 
 		{
 			// User routes
@@ -87,6 +87,12 @@ func SetUpRouter(
 				projects.GET("/:id/members", projectHandler.GetProjectMembers)
 				projects.POST("/:id/vacancy", vacancyHandler.CreateProjectVacancy)
 				projects.GET("/:id/vacancies", vacancyHandler.GetProjectVacancies)
+			}
+
+			vacancies := protected.Group("/vacancies")
+			{
+				vacancies.POST("/:id", vacancyHandler.CreateVacancyResponse)
+				vacancies.GET("/:id/responses", vacancyHandler.GetVacancyResponses)
 			}
 
 			// Tag routes

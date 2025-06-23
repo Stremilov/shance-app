@@ -32,6 +32,10 @@ type CreateTechnologyRequest struct {
 	Name string `json:"name" binding:"required"`
 }
 
+type CreateVacancyResponseRequest struct {
+	Message string `json:"message"`
+}
+
 type ProjectVacancyHandler struct {
 	service *service.ProjectVacancyService
 }
@@ -173,4 +177,97 @@ func (h *ProjectVacancyHandler) CreateTechnology(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, tech)
+}
+
+// CreateVacancyResponse godoc
+// @Summary Отклик на вакансию
+// @Description Создать отклик на вакансию
+// @Tags vacancy-responses
+// @Accept json
+// @Produce json
+// @Param id path int true "ID вакансии"
+// @Param request body CreateVacancyResponseRequest true "Данные отклика"
+// @Success 201 {object} models.SwaggerVacancyResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 401 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /vacancies/{id} [post]
+func (h *ProjectVacancyHandler) CreateVacancyResponse(c *gin.Context) {
+	vacancyID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid vacancy id"})
+		return
+	}
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
+		return
+	}
+
+	var req CreateVacancyResponseRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	response := models.VacancyResponse{
+		ProjectVacancyID: uint(vacancyID),
+		UserID:           userID.(uint),
+		Message:          req.Message,
+	}
+
+	if err := h.service.DB().Create(&response).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, response)
+}
+
+// GetVacancyResponses godoc
+// @Summary Получить отклики на вакансию
+// @Description Получить список откликов на вакансию с контактами пользователей
+// @Tags vacancy-responses
+// @Accept json
+// @Produce json
+// @Param id path int true "ID вакансии"
+// @Success 200 {array} models.SwaggerVacancyResponse
+// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /vacancies/{id}/responses [get]
+func (h *ProjectVacancyHandler) GetVacancyResponses(c *gin.Context) {
+	vacancyID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid vacancy id"})
+		return
+	}
+
+	var responses []models.VacancyResponse
+	if err := h.service.DB().Preload("User").Where("project_vacancy_id = ?", vacancyID).Find(&responses).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	type ResponseInfo struct {
+		FirstName string    `json:"first_name"`
+		LastName  string    `json:"last_name"`
+		Email     string    `json:"email"`
+		Phone     string    `json:"phone"`
+		Message   string    `json:"message"`
+		CreatedAt time.Time `json:"created_at"`
+	}
+
+	var result []ResponseInfo
+	for _, r := range responses {
+		result = append(result, ResponseInfo{
+			FirstName: r.User.FirstName,
+			LastName:  r.User.LastName,
+			Email:     r.User.Email,
+			Phone:     r.User.Phone,
+			Message:   r.Message,
+			CreatedAt: r.CreatedAt,
+		})
+	}
+
+	c.JSON(http.StatusOK, result)
 }
