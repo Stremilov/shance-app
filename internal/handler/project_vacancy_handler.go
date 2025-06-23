@@ -12,9 +12,10 @@ import (
 
 // CreateProjectVacancyRequest описывает тело запроса на создание вакансии
 type CreateProjectVacancyRequest struct {
-	Title        string `json:"title" binding:"required"`
-	Description  string `json:"description" binding:"required"`
-	Technologies []uint `json:"technologies" binding:"required"` // id технологий
+	Title        string   `json:"title" binding:"required"`
+	Description  string   `json:"description" binding:"required"`
+	Technologies []uint   `json:"technologies" binding:"required"` // id технологий
+	Questions    []string `json:"questions" binding:"required"`
 }
 
 type VacancyResponse struct {
@@ -22,6 +23,7 @@ type VacancyResponse struct {
 	ProjectID       uint      `json:"project_id"`
 	Title           string    `json:"title"`
 	Description     string    `json:"description"`
+	Questions       []string  `json:"questions"`
 	TechnologyNames []string  `json:"technology_names"`
 	CreatedAt       time.Time `json:"created_at"`
 }
@@ -40,12 +42,12 @@ func NewProjectVacancyHandler(service *service.ProjectVacancyService) *ProjectVa
 
 // CreateProjectVacancy godoc
 // @Summary Создать вакансию для проекта
-// @Description Создаёт новую вакансию, привязанную к проекту
+// @Description Создаёт новую вакансию, привязанную к проекту. Вопросы передаются как массив строк в поле questions.
 // @Tags vacancies
 // @Accept json
 // @Produce json
 // @Param id path int true "ID проекта"
-// @Param request body CreateProjectVacancyRequest true "Данные вакансии"
+// @Param request body CreateProjectVacancyRequest true "Данные вакансии (title, description, technologies - id технологий, questions - массив строк)"
 // @Success 201 {object} models.SwaggerProjectVacancy
 // @Failure 400 {object} ErrorResponse
 // @Failure 500 {object} ErrorResponse
@@ -71,11 +73,22 @@ func (h *ProjectVacancyHandler) CreateProjectVacancy(c *gin.Context) {
 		}
 	}
 
+	var questions []models.Question
+	for _, qText := range req.Questions {
+		var q models.Question
+		if err := h.service.DB().Where("description = ?", qText).FirstOrCreate(&q, models.Question{Description: qText}).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		questions = append(questions, q)
+	}
+
 	vacancy := models.ProjectVacancy{
 		ProjectID:    uint(projectID),
 		Title:        req.Title,
 		Description:  req.Description,
 		Technologies: technologies,
+		Questions:    questions,
 	}
 
 	if err := h.service.Create(&vacancy); err != nil {
@@ -113,14 +126,20 @@ func (h *ProjectVacancyHandler) GetProjectVacancies(c *gin.Context) {
 	var resp []VacancyResponse
 	for _, v := range vacancies {
 		var techNames []string
+		var techQuestions []string
 		for _, t := range v.Technologies {
 			techNames = append(techNames, t.Name)
 		}
+		for _, q := range v.Questions {
+			techQuestions = append(techQuestions, q.Description)
+		}
+
 		resp = append(resp, VacancyResponse{
 			ID:              v.ID,
 			ProjectID:       v.ProjectID,
 			Title:           v.Title,
 			Description:     v.Description,
+			Questions:       techQuestions,
 			TechnologyNames: techNames,
 			CreatedAt:       v.CreatedAt,
 		})

@@ -61,6 +61,11 @@ type Technology struct {
 	Name string `gorm:"unique;not null" json:"name"`
 }
 
+type Question struct {
+	ID          uint   `gorm:"primaryKey" json:"id"`
+	Description string `gorm:"string;not null" json:"description"`
+}
+
 type VacancyTechnology struct {
 	ProjectVacancyID uint
 	TechnologyID     uint
@@ -68,12 +73,19 @@ type VacancyTechnology struct {
 	gorm.Model
 }
 
+type VacancyQuestion struct {
+	ProjectVacancyID uint
+	QuestionID       uint
+	Question         Question `gorm:"foreignKey:QuestionID"`
+	gorm.Model
+}
+
 type ProjectVacancy struct {
 	ID           uint         `gorm:"primaryKey" json:"id"`
 	ProjectID    uint         `json:"project_id"`
-	Project      Project      `gorm:"foreignKey:ProjectID"`
 	Title        string       `json:"title"`
 	Description  string       `json:"description"`
 	Technologies []Technology `gorm:"many2many:vacancy_technologies;" json:"technologies"`
+	Questions    []Question   `gorm:"many2many:vacancy_questions;" json:"questions"`
 	CreatedAt    time.Time    `json:"created_at"`
 }

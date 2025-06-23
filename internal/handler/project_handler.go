@@ -7,8 +7,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/levstremilov/shance-app/internal/helpers"
 	"github.com/levstremilov/shance-app/internal/models"
 	"github.com/levstremilov/shance-app/internal/service"
+
 	"gorm.io/gorm"
 )
 
@@ -159,10 +161,15 @@ func (h *ProjectHandler) GetProject(c *gin.Context) {
 // @Summary Создание нового проекта
 // @Description Создает новый проект для текущего пользователя
 // @Tags projects
-// @Accept json
+// @Accept multipart/form-data
 // @Produce json
 // @Security ApiKeyAuth
-// @Param request body CreateProjectRequest true "Данные проекта"
+// @Param name formData string true "Название проекта"
+// @Param title formData string false "Заголовок"
+// @Param subtitle formData string false "Подзаголовок"
+// @Param description formData string false "Описание"
+// @Param tags formData string false "Теги (можно несколько, tags=tag1&tags=tag2)"
+// @Param photo formData file false "Фотографии (можно несколько)"
 // @Success 201 {object} models.SwaggerProject
 // @Failure 400 {object} ErrorResponse
 // @Failure 401 {object} ErrorResponse
@@ -175,27 +182,44 @@ func (h *ProjectHandler) CreateProject(c *gin.Context) {
 		return
 	}
 
-	var req CreateProjectRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, ErrorResponse{Error: err.Error()})
+	form, err := c.MultipartForm()
+	if err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid form data"})
 		return
 	}
 
+	name := form.Value["name"]
+	title := form.Value["title"]
+	subtitle := form.Value["subtitle"]
+	description := form.Value["description"]
+	tags := form.Value["tags"] // tags[]
+
+	var photoPaths []string
+	files := form.File["photo"]
+	for _, file := range files {
+		path := "uploads/" + file.Filename // путь для сохранения
+		if err := c.SaveUploadedFile(file, path); err != nil {
+			c.JSON(http.StatusInternalServerError, ErrorResponse{Error: err.Error()})
+			return
+		}
+		photoPaths = append(photoPaths, path)
+	}
+
 	project := &models.Project{
-		Name:        req.Name,
-		Title:       req.Title,
-		Subtitle:    req.Subtitle,
-		Description: req.Description,
-		Photo:       req.Photo,
+		Name:        helpers.GetFirst(name),
+		Title:       helpers.GetFirst(title),
+		Subtitle:    helpers.GetFirst(subtitle),
+		Description: helpers.GetFirst(description),
+		Photo:       helpers.MarshalPhotos(photoPaths),
 		UserID:      userID.(uint),
 	}
 
-	if len(req.Tags) > 0 {
-		tags := make([]models.Tag, len(req.Tags))
-		for i, tagName := range req.Tags {
-			tags[i] = models.Tag{Name: tagName}
+	if len(tags) > 0 {
+		tgs := make([]models.Tag, len(tags))
+		for i, tagName := range tags {
+			tgs[i] = models.Tag{Name: tagName}
 		}
-		project.Tags = tags
+		project.Tags = tgs
 	}
 
 	if err := h.projectService.Create(project); err != nil {

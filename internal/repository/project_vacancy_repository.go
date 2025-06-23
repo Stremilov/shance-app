@@ -19,7 +19,7 @@ func (r *ProjectVacancyRepository) Create(vacancy *models.ProjectVacancy) error 
 
 func (r *ProjectVacancyRepository) FindByProjectID(projectID uint) ([]models.ProjectVacancy, error) {
 	var vacancies []models.ProjectVacancy
-	err := r.db.Preload("Technologies").Where("project_id = ?", projectID).Find(&vacancies).Error
+	err := r.db.Preload("Technologies").Preload("Questions").Where("project_id = ?", projectID).Find(&vacancies).Error
 	if err != nil {
 		return nil, err
 	}

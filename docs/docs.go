@@ -213,7 +213,7 @@ const docTemplate = `{
                 ],
                 "description": "Создает новый проект для текущего пользователя",
                 "consumes": [
-                    "application/json"
+                    "multipart/form-data"
                 ],
                 "produces": [
                     "application/json"
@@ -224,13 +224,41 @@ const docTemplate = `{
                 "summary": "Создание нового проекта",
                 "parameters": [
                     {
-                        "description": "Данные проекта",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/handler.CreateProjectRequest"
-                        }
+                        "type": "string",
+                        "description": "Название проекта",
+                        "name": "name",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Заголовок",
+                        "name": "title",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Подзаголовок",
+                        "name": "subtitle",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Описание",
+                        "name": "description",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Теги (можно несколько, tags=tag1\u0026tags=tag2)",
+                        "name": "tags",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "file",
+                        "description": "Фотографии (можно несколько)",
+                        "name": "photo",
+                        "in": "formData"
                     }
                 ],
                 "responses": {
@@ -609,7 +637,7 @@ const docTemplate = `{
         },
         "/projects/{id}/vacancy": {
             "post": {
-                "description": "Создаёт новую вакансию, привязанную к проекту",
+                "description": "Создаёт новую вакансию, привязанную к проекту. Вопросы передаются как массив строк в поле questions.",
                 "consumes": [
                     "application/json"
                 ],
@@ -629,7 +657,7 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "description": "Данные вакансии",
+                        "description": "Данные вакансии (title, description, technologies - id технологий, questions - массив строк)",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -1111,45 +1139,23 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "handler.CreateProjectRequest": {
-            "type": "object",
-            "required": [
-                "name"
-            ],
-            "properties": {
-                "description": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "photo": {
-                    "type": "string"
-                },
-                "subtitle": {
-                    "type": "string"
-                },
-                "tags": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "title": {
-                    "type": "string"
-                }
-            }
-        },
         "handler.CreateProjectVacancyRequest": {
             "type": "object",
             "required": [
                 "description",
+                "questions",
                 "technologies",
                 "title"
             ],
             "properties": {
                 "description": {
                     "type": "string"
+                },
+                "questions": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "technologies": {
                     "description": "id технологий",

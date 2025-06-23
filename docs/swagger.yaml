@@ -1,28 +1,13 @@
 basePath: /api/v1
 definitions:
-  handler.CreateProjectRequest:
-    properties:
-      description:
-        type: string
-      name:
-        type: string
-      photo:
-        type: string
-      subtitle:
-        type: string
-      tags:
-        items:
-          type: string
-        type: array
-      title:
-        type: string
-    required:
-    - name
-    type: object
   handler.CreateProjectVacancyRequest:
     properties:
       description:
         type: string
+      questions:
+        items:
+          type: string
+        type: array
       technologies:
         description: id технологий
         items:
@@ -32,6 +17,7 @@ definitions:
         type: string
     required:
     - description
+    - questions
     - technologies
     - title
     type: object
@@ -492,15 +478,34 @@ paths:
       - projects
     post:
       consumes:
-      - application/json
+      - multipart/form-data
       description: Создает новый проект для текущего пользователя
       parameters:
-      - description: Данные проекта
-        in: body
-        name: request
+      - description: Название проекта
+        in: formData
+        name: name
         required: true
-        schema:
-          $ref: '#/definitions/handler.CreateProjectRequest'
+        type: string
+      - description: Заголовок
+        in: formData
+        name: title
+        type: string
+      - description: Подзаголовок
+        in: formData
+        name: subtitle
+        type: string
+      - description: Описание
+        in: formData
+        name: description
+        type: string
+      - description: Теги (можно несколько, tags=tag1&tags=tag2)
+        in: formData
+        name: tags
+        type: string
+      - description: Фотографии (можно несколько)
+        in: formData
+        name: photo
+        type: file
       produces:
       - application/json
       responses:
@@ -727,14 +732,16 @@ paths:
     post:
       consumes:
       - application/json
-      description: Создаёт новую вакансию, привязанную к проекту
+      description: Создаёт новую вакансию, привязанную к проекту. Вопросы передаются
+        как массив строк в поле questions.
       parameters:
       - description: ID проекта
         in: path
         name: id
         required: true
         type: integer
-      - description: Данные вакансии
+      - description: Данные вакансии (title, description, technologies - id технологий,
+          questions - массив строк)
         in: body
         name: request
         required: true
