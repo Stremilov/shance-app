@@ -13,6 +13,7 @@ import (
 	"github.com/levstremilov/shance-app/internal/service"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+	ginprometheus "github.com/zsais/go-gin-prometheus"
 )
 
 func SetUpRouter(
@@ -25,6 +26,10 @@ func SetUpRouter(
 	cfg *config.Config,
 ) *gin.Engine {
 	r := gin.Default()
+
+	p := ginprometheus.NewPrometheus("gin")
+	p.MetricsPath = "/metrics"
+	p.Use(r)
 
 	// CORS
 	r.Use(cors.New(cors.Config{
